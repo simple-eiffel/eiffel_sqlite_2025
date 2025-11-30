@@ -3,7 +3,7 @@
 
 CC = cl
 AR = lib
-CFLAGS = /nologo /MD /O2 /W3 /EHsc
+CFLAGS = /nologo /MT /O2 /W3 /EHsc
 INCLUDES = /I. /I"C:\Program Files\Eiffel Software\EiffelStudio 25.02 Standard\studio\spec\win64\include"
 
 # Modern SQLite compile flags
