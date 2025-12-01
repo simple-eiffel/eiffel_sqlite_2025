@@ -71,13 +71,13 @@ This library serves as the foundation for [simple_sql](https://github.com/ljr198
 
 1. Clone both repositories:
    ```cmd
-   git clone https://github.com/ljr1981/eiffel_sqlite_2025.git D:\prod\eiffel_sqlite_2025
-   git clone https://github.com/ljr1981/simple_sql.git D:\prod\simple_sql
+   git clone https://github.com/ljr1981/eiffel_sqlite_2025.git
+   git clone https://github.com/ljr1981/simple_sql.git
    ```
 
-2. Set environment variable:
+2. Set environment variable (adjust path to your clone location):
    ```cmd
-   set EIFFEL_SQLITE_2025=D:\prod\eiffel_sqlite_2025
+   set EIFFEL_SQLITE_2025=C:\path\to\eiffel_sqlite_2025
    ```
 
 3. Build the C library (see Build Instructions below)
@@ -100,7 +100,7 @@ If you only need the low-level SQLite binding:
 
 - Visual Studio 2022 (or 2019+) with C++ Build Tools
 - x64 Native Tools Command Prompt
-- Environment variable: `EIFFEL_SQLITE_2025=D:\prod\eiffel_sqlite_2025`
+- Environment variable: `EIFFEL_SQLITE_2025` pointing to your clone location
 
 ### Option 1: Using Makefile (Recommended)
 
@@ -108,7 +108,7 @@ For EiffelStudio users:
 
 ```cmd
 :: Open "x64 Native Tools Command Prompt for VS 2022"
-set EIFFEL_SQLITE_2025=D:\prod\eiffel_sqlite_2025
+set EIFFEL_SQLITE_2025=C:\path\to\eiffel_sqlite_2025
 cd %EIFFEL_SQLITE_2025%\Clib
 nmake /f Makefile
 ```
@@ -121,7 +121,7 @@ For Gobo Eiffel or custom configurations:
 
 ```cmd
 :: Open "x64 Native Tools Command Prompt for VS 2022"
-cd D:\prod\eiffel_sqlite_2025\Clib
+cd %EIFFEL_SQLITE_2025%\Clib
 
 :: Compile SQLite with all extensions
 cl /c /O2 /MT ^
