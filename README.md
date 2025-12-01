@@ -2,7 +2,7 @@
 
 **Modern SQLite 3.51.1 wrapper for Eiffel with FTS5, JSON1, and advanced features.**
 
-A production-ready SQLite binding for Eiffel applications, designed to work seamlessly with the [simple_sql](https://github.com/user/simple_sql) high-level API library.
+A production-ready SQLite binding for Eiffel applications, designed to work seamlessly with the [simple_sql](https://github.com/ljr1981/simple_sql) high-level API library.
 
 ## Why This Library?
 
@@ -44,7 +44,7 @@ For complete compile flag documentation, see [COMPILE_FLAGS.md](COMPILE_FLAGS.md
 
 ## Integration with simple_sql
 
-This library serves as the foundation for [simple_sql](https://github.com/user/simple_sql), a high-level SQLite API for Eiffel. Together they provide:
+This library serves as the foundation for [simple_sql](https://github.com/ljr1981/simple_sql), a high-level SQLite API for Eiffel. Together they provide:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -71,8 +71,8 @@ This library serves as the foundation for [simple_sql](https://github.com/user/s
 
 1. Clone both repositories:
    ```cmd
-   git clone https://github.com/user/eiffel_sqlite_2025.git D:\prod\eiffel_sqlite_2025
-   git clone https://github.com/user/simple_sql.git D:\prod\simple_sql
+   git clone https://github.com/ljr1981/eiffel_sqlite_2025.git D:\prod\eiffel_sqlite_2025
+   git clone https://github.com/ljr1981/simple_sql.git D:\prod\simple_sql
    ```
 
 2. Set environment variable:
@@ -268,7 +268,7 @@ SQLite itself is in the **Public Domain**.
 
 ## Related Projects
 
-- **[simple_sql](https://github.com/user/simple_sql)** - High-level SQLite API built on this library
+- **[simple_sql](https://github.com/ljr1981/simple_sql)** - High-level SQLite API built on this library
   - Fluent query builders
   - Repository pattern
   - Schema migrations
