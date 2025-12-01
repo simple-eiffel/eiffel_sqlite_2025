@@ -1058,7 +1058,7 @@ feature {NONE} -- Basic operations: Callbacks
 			not_is_closed: not is_closed
 		end
 
-feature {SQLITE_INTERNALS} -- Implementation
+feature {SQLITE_INTERNALS, SQLITE_BACKUP_EXTERNALS} -- Implementation
 
 	internal_db: POINTER
 			-- Handle to the database.

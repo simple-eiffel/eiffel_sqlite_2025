@@ -515,6 +515,62 @@ feature -- Externals
 			is_class: class
 		end
 
+feature -- Online Backup API
+
+	c_sqlite3_backup_init (a_dest_db: POINTER; a_dest_name: POINTER; a_source_db: POINTER; a_source_name: POINTER): POINTER
+			-- Initialize a backup operation from source to destination database
+			-- Returns sqlite3_backup* pointer or NULL on failure
+		external
+			"C inline use <sqlite3.h>"
+		alias
+			"return (EIF_POINTER)sqlite3_backup_init((sqlite3 *)$a_dest_db, (const char *)$a_dest_name, (sqlite3 *)$a_source_db, (const char *)$a_source_name)"
+		ensure
+			is_class: class
+		end
+
+	c_sqlite3_backup_step (a_backup: POINTER; a_pages: INTEGER): INTEGER
+			-- Copy up to a_pages pages from source to destination
+			-- Pass -1 to copy all remaining pages
+			-- Returns SQLITE_OK, SQLITE_DONE, or error code
+		external
+			"C inline use <sqlite3.h>"
+		alias
+			"return (EIF_INTEGER)sqlite3_backup_step((sqlite3_backup *)$a_backup, (int)$a_pages)"
+		ensure
+			is_class: class
+		end
+
+	c_sqlite3_backup_finish (a_backup: POINTER): INTEGER
+			-- Release all resources associated with backup operation
+			-- Returns SQLITE_OK or error code
+		external
+			"C inline use <sqlite3.h>"
+		alias
+			"return (EIF_INTEGER)sqlite3_backup_finish((sqlite3_backup *)$a_backup)"
+		ensure
+			is_class: class
+		end
+
+	c_sqlite3_backup_remaining (a_backup: POINTER): INTEGER
+			-- Number of pages still to be backed up
+		external
+			"C inline use <sqlite3.h>"
+		alias
+			"return (EIF_INTEGER)sqlite3_backup_remaining((sqlite3_backup *)$a_backup)"
+		ensure
+			is_class: class
+		end
+
+	c_sqlite3_backup_pagecount (a_backup: POINTER): INTEGER
+			-- Total number of pages in source database
+		external
+			"C inline use <sqlite3.h>"
+		alias
+			"return (EIF_INTEGER)sqlite3_backup_pagecount((sqlite3_backup *)$a_backup)"
+		ensure
+			is_class: class
+		end
+
 ;note
 	copyright: "Copyright (c) 1984-2009, Eiffel Software"
 	license: "GPL version 2 (see http://www.eiffel.com/licensing/gpl.txt)"
