@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ljr1981/claude_eiffel_op_docs/main/artwork/LOGO-3.png" alt="simple_ library logo" width="400">
+</p>
+
 # Eiffel SQLite 2025
 
 **Modern SQLite 3.51.1 wrapper for Eiffel with FTS5, JSON1, and advanced features.**
