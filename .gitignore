@@ -1,39 +1,26 @@
-# Compiled Object files
-*.obj
-*.o
-
-# Compiled Static libraries
-*.lib
-*.a
-
-# Build artifacts
-spec/*/
+# Eiffel build artifacts
 EIFGENs/
+Documentation/
 
-# Visual Studio temporary files
-*.suo
-*.user
-*.sln.docstates
-*.sdf
-*.opensdf
-*.VC.db
-*.VC.opendb
-
-# Build output directories
-/Clib/*.obj
-/spec/
-
-# Windows temporary files
-Thumbs.db
-ehthumbs.db
-Desktop.ini
+# Compiled files
+*.melted
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
 
 # Backup files
-*~
-*.bak
 *.swp
+*.bak
+*~
 
 # IDE files
 .vscode/
-.vs/
-*.code-workspace
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
