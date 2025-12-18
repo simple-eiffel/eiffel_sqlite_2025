@@ -7,12 +7,12 @@
 	<target name="sqlite_2025">
 		<root all_classes="true"/>
 		<file_rule>
-			<exclude>/CVS$</exclude>
-			<exclude>/Clib$</exclude>
-			<exclude>/EIFGENs$</exclude>
-			<exclude>/\.git$</exclude>
-			<exclude>/\.svn$</exclude>
-			<exclude>/spec$</exclude>
+			<exclude>/CVS@</exclude>
+			<exclude>/Clib@</exclude>
+			<exclude>/EIFGENs@</exclude>
+			<exclude>/\.git@</exclude>
+			<exclude>/\.svn@</exclude>
+			<exclude>/spec@</exclude>
 		</file_rule>
 		<option warning="warning" is_obsolete_iteration="true"/>
 		<setting name="total_order_on_reals" value="true"/>
@@ -20,23 +20,23 @@
 		<capability>
 			<void_safety support="all"/>
 		</capability>
-		<external_include location="$SIMPLE_EIFFEL/eiffel_sqlite_2025/Clib"/>
-		<external_object location="$SIMPLE_EIFFEL/eiffel_sqlite_2025/Clib/sqlite3.obj">
+		<external_include location="$(SIMPLE_EIFFEL)/eiffel_sqlite_2025/Clib"/>
+		<external_object location="$(SIMPLE_EIFFEL)/eiffel_sqlite_2025/Clib/sqlite3.obj">
 			<condition>
 				<platform value="windows"/>
 			</condition>
 		</external_object>
-		<external_object location="$SIMPLE_EIFFEL/eiffel_sqlite_2025/Clib/esqlite.obj">
+		<external_object location="$(SIMPLE_EIFFEL)/eiffel_sqlite_2025/Clib/esqlite.obj">
 			<condition>
 				<platform value="windows"/>
 			</condition>
 		</external_object>
-		<external_object location="$SIMPLE_EIFFEL/eiffel_sqlite_2025/Clib/sqlite3.o">
+		<external_object location="$(SIMPLE_EIFFEL)/eiffel_sqlite_2025/Clib/sqlite3.o">
 			<condition>
 				<platform excluded_value="windows"/>
 			</condition>
 		</external_object>
-		<external_object location="$SIMPLE_EIFFEL/eiffel_sqlite_2025/Clib/esqlite.o">
+		<external_object location="$(SIMPLE_EIFFEL)/eiffel_sqlite_2025/Clib/esqlite.o">
 			<condition>
 				<platform excluded_value="windows"/>
 			</condition>
@@ -53,11 +53,11 @@
 		<cluster name="sqlite" location=".\">
 			<option warning="none" is_obsolete_iteration="true"/>
 			<file_rule>
-				<exclude>/Clib$</exclude>
-				<exclude>/binding$</exclude>
-				<exclude>/internals$</exclude>
-				<exclude>/spec$</exclude>
-				<exclude>/support$</exclude>
+				<exclude>/Clib@</exclude>
+				<exclude>/binding@</exclude>
+				<exclude>/internals@</exclude>
+				<exclude>/spec@</exclude>
+				<exclude>/support@</exclude>
 			</file_rule>
 		</cluster>
 		<cluster name="support" location=".\support\">
@@ -71,7 +71,7 @@
 		</option>
 		<setting name="console_application" value="true"/>
 		<library name="testing" location="$ISE_LIBRARY\library\testing\testing.ecf"/>
-		<library name="simple_testing" location="$SIMPLE_EIFFEL/simple_testing/simple_testing.ecf"/>
+		<library name="simple_testing" location="$(SIMPLE_EIFFEL)/simple_testing/simple_testing.ecf"/>
 		<cluster name="tests" location=".\tests\" recursive="true"/>
 	</target>
 </system>
