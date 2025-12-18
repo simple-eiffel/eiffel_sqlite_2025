@@ -20,27 +20,32 @@
 		<capability>
 			<void_safety support="all"/>
 		</capability>
-		<external_include location="$(SIMPLE_EIFFEL)/eiffel_sqlite_2025/Clib"/>
-		<external_object location="$(SIMPLE_EIFFEL)/eiffel_sqlite_2025/Clib/sqlite3.obj">
+		<external_include location="$SIMPLE_EIFFEL/eiffel_sqlite_2025/Clib"/>
+		<external_object location="$SIMPLE_EIFFEL/eiffel_sqlite_2025/Clib/sqlite3.obj">
 			<condition>
 				<platform value="windows"/>
 			</condition>
 		</external_object>
-		<external_object location="$(SIMPLE_EIFFEL)/eiffel_sqlite_2025/Clib/esqlite.obj">
+		<external_object location="$SIMPLE_EIFFEL/eiffel_sqlite_2025/Clib/esqlite.obj">
 			<condition>
 				<platform value="windows"/>
 			</condition>
 		</external_object>
-		<external_object location="$(SIMPLE_EIFFEL)/eiffel_sqlite_2025/Clib/sqlite3.o">
+		<external_object location="$SIMPLE_EIFFEL/eiffel_sqlite_2025/Clib/sqlite3.o">
 			<condition>
 				<platform excluded_value="windows"/>
 			</condition>
 		</external_object>
-		<external_object location="$(SIMPLE_EIFFEL)/eiffel_sqlite_2025/Clib/esqlite.o">
+		<external_object location="$SIMPLE_EIFFEL/eiffel_sqlite_2025/Clib/esqlite.o">
 			<condition>
 				<platform excluded_value="windows"/>
 			</condition>
 		</external_object>
+		<external_linker_flag value="-ldl -lpthread">
+			<condition>
+				<platform excluded_value="windows"/>
+			</condition>
+		</external_linker_flag>
 		<library name="base" location="$ISE_LIBRARY\library\base\base.ecf">
 			<option warning="none"/>
 		</library>
@@ -71,7 +76,7 @@
 		</option>
 		<setting name="console_application" value="true"/>
 		<library name="testing" location="$ISE_LIBRARY\library\testing\testing.ecf"/>
-		<library name="simple_testing" location="$(SIMPLE_EIFFEL)/simple_testing/simple_testing.ecf"/>
+		<library name="simple_testing" location="$SIMPLE_EIFFEL/simple_testing/simple_testing.ecf"/>
 		<cluster name="tests" location=".\tests\" recursive="true"/>
 	</target>
 </system>
