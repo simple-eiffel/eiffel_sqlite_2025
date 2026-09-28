@@ -138,6 +138,15 @@ feature -- Externals
 			is_class: class
 		end
 
+	c_sqlite3_close_v2 (a_db: POINTER): INTEGER
+		external
+			"C inline use <sqlite3.h>"
+		alias
+			"return (EIF_INTEGER)sqlite3_close_v2((sqlite3 *)$a_db)"
+		ensure
+			is_class: class
+		end
+
 	c_sqlite3_column_blob (a_stmt: POINTER; a_column: INTEGER): POINTER
 		external
 			"C inline use <sqlite3.h>"

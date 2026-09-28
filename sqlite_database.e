@@ -551,56 +551,13 @@ feature -- Basic operations
 			l_db: like internal_db
 			l_api: like sqlite_api
 			l_result: INTEGER
-			l_stmt: POINTER
-			l_is_locked: BOOLEAN
 		do
 			check not_is_in_final_collect: not is_in_final_collect end
 			if internal_db /= default_pointer then
-					-- Before trying to close run a full collect of the GC to dispose of any lingering references.
-
-					-- Now try to close.
 				l_db := internal_db
 				l_api := sqlite_api
-				l_result := sqlite3_close (l_api, l_db)
-				if
-					(l_result & {SQLITE_RESULT_CODE}.mask) = {SQLITE_RESULT_CODE}.e_locked or else
-					(l_result & {SQLITE_RESULT_CODE}.mask) = {SQLITE_RESULT_CODE}.e_busy
-				then
-						-- Database is locked, which means there are lingering references.
-						-- Try forcing a GC to collect and dispose of any still held references.
-					{MEMORY}.full_collect
-					l_result := sqlite3_close (l_api, l_db)
-					if
-						(l_result & {SQLITE_RESULT_CODE}.mask) = {SQLITE_RESULT_CODE}.e_locked or else
-						(l_result & {SQLITE_RESULT_CODE}.mask) = {SQLITE_RESULT_CODE}.e_busy
-					then
-							-- Still locked! The only option now is to sever all statement connections (as
-							-- per-documentation recommendation.)
 
-							-- Lock the database (using thread-based locks) so we can trap error information, if needed.
-						lock
-						l_is_locked := True
-
-							-- Finalize (close) all statements
-						from
-							l_stmt := sqlite3_next_stmt (l_api, l_db, default_pointer)
-						until
-							l_stmt = default_pointer
-						loop
-							l_result := sqlite3_finalize (l_api, l_stmt)
-							check success: sqlite_success (l_result) end
-
-							l_stmt := sqlite3_next_stmt (l_api, l_db, l_stmt)
-						end
-
-							-- Unlock the database so we can reattempt a close operation.
-						l_is_locked := False
-						unlock
-					end
-				end
-				sqlite_raise_on_failure (l_result)
-
-					-- Unregister any update hooks.
+					-- Unregister hooks and handlers while the connection is still ours.
 				if attached commit_action then
 					enable_commit_callback (False)
 				end
@@ -610,8 +567,6 @@ feature -- Basic operations
 				if attached update_action then
 					enable_update_callback (False)
 				end
-
-					-- Re-enable handlers
 				if attached progress_handler then
 					enable_progress_callback (False)
 				end
@@ -619,17 +574,24 @@ feature -- Basic operations
 					enable_busy_callback (False)
 				end
 
-					-- Only reset the pointer if there was no failure, because there could still be a lock, which
-					-- can possibly be resolved by a client cleaning up.
+				l_result := sqlite3_close (l_api, l_db)
+				if
+					(l_result & {SQLITE_RESULT_CODE}.mask) = {SQLITE_RESULT_CODE}.e_locked or else
+					(l_result & {SQLITE_RESULT_CODE}.mask) = {SQLITE_RESULT_CODE}.e_busy
+				then
+						-- Prepared statements are still alive: SQLITE_STATEMENT objects the GC has
+						-- not yet disposed. Never collect from here (this runs from `dispose') and
+						-- never finalize their handles behind their backs (their own `dispose' would
+						-- then touch freed memory). Hand the connection to SQLite as a zombie:
+						-- sqlite3_close_v2 frees it when the last statement is finalized.
+					l_result := sqlite3_close_v2 (l_api, l_db)
+				end
+				sqlite_raise_on_failure (l_result)
 				internal_db := default_pointer
 			end
 		ensure
 			internal_db_is_null: internal_db = default_pointer
 			is_closed: is_closed
-		rescue
-			if l_is_locked then
-				unlock
-			end
 		end
 
 	abort

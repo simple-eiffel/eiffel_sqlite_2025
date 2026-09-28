@@ -98,6 +98,17 @@ feature -- Basic operations
 			Result := {SQLITE_EXTERNALS}.c_sqlite3_close (a_db)
 		end
 
+	sqlite3_close_v2 (a_api: SQLITE_API; a_db: POINTER): INTEGER
+			-- Close `a_db', or when prepared statements are still alive make it a zombie
+			-- that SQLite frees once the last of them is finalized.
+		require
+			a_api_attached: attached a_api
+			a_api_is_interface_usable: a_api.is_interface_usable
+			not_a_db_is_null: a_db /= default_pointer
+		do
+			Result := {SQLITE_EXTERNALS}.c_sqlite3_close_v2 (a_db)
+		end
+
 	sqlite3_extended_result_codes (a_api: SQLITE_API; a_db: POINTER; a_onoff: INTEGER): INTEGER
 		require
 			a_api_attached: attached a_api
