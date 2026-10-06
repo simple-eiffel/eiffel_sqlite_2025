@@ -625,6 +625,7 @@ feature -- Basic operations: Transactions
 			end
 			create l_statement.make (l_stmt_string, Current)
 			l_statement.execute
+			l_statement.cleanup
 			is_in_transaction := True
 		ensure
 			is_in_transaction: is_in_transaction
@@ -642,6 +643,7 @@ feature -- Basic operations: Transactions
 		do
 			create l_statement.make (once "COMMIT TRANSACTION;", Current)
 			l_statement.execute
+			l_statement.cleanup
 			is_in_transaction := False
 		ensure
 			not_is_in_transaction: not is_in_transaction
@@ -659,6 +661,7 @@ feature -- Basic operations: Transactions
 		do
 			create l_statement.make (once "ROLLBACK TRANSACTION;", Current)
 			l_statement.execute
+			l_statement.cleanup
 			is_in_transaction := False
 		ensure
 			not_is_in_transaction: not is_in_transaction
