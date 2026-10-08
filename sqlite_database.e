@@ -275,7 +275,11 @@ feature -- Element change
 			is_readable: is_readable
 			not_is_closed: attached a_function implies not is_closed
 			already_set: attached a_function implies not attached commit_action
+			eiffel_callbacks_supported: attached a_function implies are_eiffel_callbacks_supported
 		do
+			if attached a_function and not are_eiffel_callbacks_supported then
+				refuse_eiffel_callback
+			end
 			commit_action := a_function
 			enable_commit_callback (attached a_function)
 		ensure
@@ -294,7 +298,11 @@ feature -- Element change
 			is_readable: is_readable
 			not_is_closed: attached a_action implies not is_closed
 			already_set: attached a_action implies not attached rollback_action
+			eiffel_callbacks_supported: attached a_action implies are_eiffel_callbacks_supported
 		do
+			if attached a_action and not are_eiffel_callbacks_supported then
+				refuse_eiffel_callback
+			end
 			rollback_action := a_action
 			enable_rollback_callback (attached a_action)
 		ensure
@@ -312,7 +320,11 @@ feature -- Element change
 			is_readable: is_readable
 			not_is_closed: attached a_action implies not is_closed
 			already_set: attached a_action implies not attached update_action
+			eiffel_callbacks_supported: attached a_action implies are_eiffel_callbacks_supported
 		do
+			if attached a_action and not are_eiffel_callbacks_supported then
+				refuse_eiffel_callback
+			end
 			update_action := a_action
 			enable_update_callback (attached a_action)
 		ensure
@@ -329,7 +341,11 @@ feature -- Element change
 			is_readable: is_readable
 			not_is_closed: attached a_handler implies not is_closed
 			already_set: attached a_handler implies not attached progress_handler
+			eiffel_callbacks_supported: attached a_handler implies are_eiffel_callbacks_supported
 		do
+			if attached a_handler and not are_eiffel_callbacks_supported then
+				refuse_eiffel_callback
+			end
 			progress_handler := a_handler
 			enable_progress_callback (attached a_handler)
 		ensure
@@ -347,7 +363,11 @@ feature -- Element change
 			is_readable: is_readable
 			not_is_closed: attached a_handler implies not is_closed
 			already_set: attached a_handler implies not attached busy_handler
+			eiffel_callbacks_supported: attached a_handler implies are_eiffel_callbacks_supported
 		do
+			if attached a_handler and not are_eiffel_callbacks_supported then
+				refuse_eiffel_callback
+			end
 			busy_handler := a_handler
 			enable_busy_callback (attached a_handler)
 		ensure
@@ -362,6 +382,26 @@ feature -- Element change
 		do
 			res := {SQLITE_EXTERNALS}.c_sqlite3_limit (internal_db, SQLITE_LIMIT_VARIABLE_NUMBER, nb.to_integer_32)
 			check limit_set: res.to_integer_32 = nb end
+		end
+
+feature -- Status report: Callbacks
+
+	are_eiffel_callbacks_supported: BOOLEAN = False
+			-- May an Eiffel commit, rollback, update, progress or busy routine be installed?
+			-- False while `step', `prepare', `open', `close' and `backup_step' are `blocking' externals:
+			-- esqlite.c calls Eiffel from inside them without re-entering the runtime.
+			-- `set_busy_timeout' is unaffected (SQLite's own C busy wait).
+
+feature {NONE} -- Callback guard
+
+	refuse_eiffel_callback
+			-- Refuse an Eiffel callback even when preconditions are not monitored.
+		local
+			l_ex: DEVELOPER_EXCEPTION
+		do
+			create l_ex
+			l_ex.set_description ("Eiffel SQLite callbacks are not supported while the long externals are blocking")
+			l_ex.raise
 		end
 
 feature -- Status report

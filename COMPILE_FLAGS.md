@@ -21,7 +21,8 @@ Enables the FTS5 full-text search extension. FTS5 is the latest and most advance
 **Documentation**: https://www.sqlite.org/fts5.html
 
 ### SQLITE_ENABLE_JSON1
-Enables JSON functions and operators, including:
+Since SQLite 3.38.0 the JSON functions are built in and this flag has no effect; it is kept so the flags stay
+unchanged. `PRAGMA compile_options` no longer lists it on 3.53.4, but the functions work. They include:
 - `json()` - Validate and minify JSON
 - `json_array()` - Create JSON arrays
 - `json_object()` - Create JSON objects
@@ -50,7 +51,8 @@ Enables the Geopoly extension for geographic polygon queries. Extends R-Tree wit
 **Documentation**: https://www.sqlite.org/geopoly.html
 
 ### SQLITE_ENABLE_MATH_FUNCTIONS
-Enables additional mathematical functions:
+Enables additional mathematical functions. **Effective only since library 1.1.0:** the flag was passed before,
+but SQLite 3.31.1 ignored it (math functions arrived in 3.35.0). Functions:
 - Trigonometric: `acos()`, `asin()`, `atan()`, `atan2()`, `cos()`, `sin()`, `tan()`
 - Logarithmic: `log()`, `log10()`, `log2()`, `exp()`
 - Power: `pow()`, `sqrt()`
@@ -80,6 +82,31 @@ Disables the ability to load external shared libraries at runtime. This prevents
 **Why enabled**: Security best practice, especially for embedded/library use.
 
 **Documentation**: https://www.sqlite.org/loadext.html
+
+## Vendor defaults that changed with 3.53.4 (not pinned)
+
+Library 1.1.0 moved from SQLite 3.31.1 to 3.53.4 with the flags above unchanged. Five defaults that the
+flags do not set changed in effect. They are accepted as the vendor ships them; none removes a capability.
+
+| Default | 3.31.1 | 3.53.4 | Since |
+|---------|--------|--------|-------|
+| `SQLITE_MAX_VARIABLE_NUMBER` | 999 | 32766 | 3.32.0 |
+| `SQLITE_MAX_FUNCTION_ARG` | 127 | 1000 | 3.48.0 |
+| `SQLITE_MAX_PAGE_COUNT` | 1073741823 | 0xfffffffe | 3.45.0 |
+| `SQLITE_DIRECT_OVERFLOW_READ` | off | on | 3.45.0 |
+| `SQLITE_USE_SEH` (MSVC) | absent | on | 3.44.0 |
+
+`SQLITE_USE_SEH`'s exception filter handles only in-page errors inside WAL `-shm` code and passes every other
+exception on, so it does not interfere with the Eiffel runtime. To pin any of these, add the `/D` flag to
+`SQLITE_FLAGS` in `Clib/Makefile` and record the change here. `SQLITE_MAX_ATTACHED` is 10 on both versions.
+
+`PRAGMA compile_options` on 3.53.4 also lists about 35 default and limit rows that 3.31.1 did not list: in
+3.53.4 the option table is compiled after the default definitions, so defaults are reported too.
+
+## Not used: EIF_THREADS
+
+Do not add `/DEIF_THREADS` to the `esqlite.c` build. It is inert for the stock `esqlite.c`, and re-entry code
+that depends on it breaks every non-concurrent (`concurrency use="none"`) link.
 
 ## Modifying Compile Flags
 

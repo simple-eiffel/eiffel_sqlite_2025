@@ -131,7 +131,7 @@ feature -- Externals
 
 	c_sqlite3_close (a_db: POINTER): INTEGER
 		external
-			"C inline use <sqlite3.h>"
+			"C blocking inline use <sqlite3.h>"
 		alias
 			"return (EIF_INTEGER)sqlite3_close((sqlite3 *)$a_db)"
 		ensure
@@ -140,7 +140,7 @@ feature -- Externals
 
 	c_sqlite3_close_v2 (a_db: POINTER): INTEGER
 		external
-			"C inline use <sqlite3.h>"
+			"C blocking inline use <sqlite3.h>"
 		alias
 			"return (EIF_INTEGER)sqlite3_close_v2((sqlite3 *)$a_db)"
 		ensure
@@ -436,7 +436,7 @@ feature -- Externals
 
 	c_sqlite3_open_v2 (a_file_name: POINTER; a_db: TYPED_POINTER [POINTER]; a_flags: INTEGER; a_vfs: POINTER): INTEGER
 		external
-			"C inline use <sqlite3.h>"
+			"C blocking inline use <sqlite3.h>"
 		alias
 			"return (EIF_INTEGER)sqlite3_open_v2((const char *)$a_file_name, (sqlite3 **)$a_db, (int)$a_flags, (const char *)$a_vfs)"
 		ensure
@@ -445,7 +445,7 @@ feature -- Externals
 
 	c_sqlite3_prepare_v2 (a_db: POINTER; a_statement: POINTER; a_bytes: INTEGER; a_hnd: TYPED_POINTER [POINTER]; a_tail: TYPED_POINTER [POINTER]): INTEGER
 		external
-			"C inline use <sqlite3.h>"
+			"C blocking inline use <sqlite3.h>"
 		alias
 			"return (EIF_INTEGER)sqlite3_prepare_v2((sqlite3 *)$a_db, (const char *)$a_statement, (int)$a_bytes, (sqlite3_stmt **)$a_hnd, (const char **)$a_tail)"
 		ensure
@@ -490,7 +490,7 @@ feature -- Externals
 
 	c_sqlite3_step (a_stmt: POINTER): INTEGER
 		external
-			"C inline use <sqlite3.h>"
+			"C blocking inline use <sqlite3.h>"
 		alias
 			"return (EIF_INTEGER)sqlite3_step((sqlite3_stmt *)$a_stmt)"
 		ensure
@@ -542,7 +542,7 @@ feature -- Online Backup API
 			-- Pass -1 to copy all remaining pages
 			-- Returns SQLITE_OK, SQLITE_DONE, or error code
 		external
-			"C inline use <sqlite3.h>"
+			"C blocking inline use <sqlite3.h>"
 		alias
 			"return (EIF_INTEGER)sqlite3_backup_step((sqlite3_backup *)$a_backup, (int)$a_pages)"
 		ensure

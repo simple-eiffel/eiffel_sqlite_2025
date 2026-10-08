@@ -70,7 +70,7 @@
 		</cluster>
 	</target>
 	<target name="sqlite_2025_test" extends="sqlite_2025">
-		<root class="ANY" feature="default_create"/>
+		<root class="TEST_APP" feature="make"/>
 		<option warning="warning">
 			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
 		</option>

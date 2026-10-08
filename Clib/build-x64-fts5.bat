@@ -3,7 +3,7 @@ REM Quick build script for x64 SQLite with all modern features
 REM Includes: FTS5, JSON1, RTREE, GEOPOLY, Math Functions, Column Metadata
 
 echo =====================================================
-echo Building SQLite 3.51.1 (x64 with all features)
+echo Building SQLite 3.53.4 (x64 with all features; the Makefile holds the authoritative flags)
 echo =====================================================
 echo.
 
