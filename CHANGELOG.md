@@ -31,6 +31,16 @@ All notable changes to this project will be documented in this file.
   it now roots at `TEST_APP` (`tests/test_app.e`), with tests for the linked version, the guard and the
   behavior changes below.
 
+### Fixed
+- **URI file names are honored (`SQLITE_OPEN_URI`).** Every connection is now opened with
+  `SQLITE_OPEN_URI`, so a name that starts with `file:` is a URI, in the main database name and in
+  `ATTACH`. Before, `ATTACH 'file:x.db?mode=ro'` silently created a **writable** file named
+  `file:x.db?mode=ro` (on NTFS an alternate data stream of a file named `file`) instead of attaching `x.db`
+  read-only. Now the attachment is read-only (writes fail with SQLITE_READONLY) and a missing file with
+  `mode=ro` is an error instead of being created. Names that do not start with `file:` behave exactly as
+  before, including names containing `?` or `#` (tested with `plain#name.db`). Edge: a relative name that
+  itself begins with `file:` is now parsed as a URI. No compile flag changed.
+
 ### Behavior changes clients may observe (3.31.1 to 3.53.4)
 - **REAL to text renders up to 17 significant digits** (was 15): values whose 15-digit text does not
   round-trip change, e.g. `CAST(0.1 + 0.2 AS TEXT)` = `0.30000000000000004`, `1.0 / 3` =

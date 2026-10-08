@@ -250,7 +250,109 @@ feature -- Test routines: callback guard
 			l_db.close
 		end
 
+feature -- Test routines: URI file names (D7)
+
+	test_attach_uri_read_only_refuses_writes
+			-- ATTACH 'file:...?mode=ro' attaches read-only: reads work, a write fails.
+		local
+			l_db: SQLITE_DATABASE
+		do
+			make_fixture ("uri_ro_fixture.db")
+			create l_db.make (create {SQLITE_IN_MEMORY_SOURCE})
+			l_db.open_create_read_write
+			assert_true ("attach_ok", run_modify (l_db, "ATTACH DATABASE 'file:uri_ro_fixture.db?mode=ro' AS ro;"))
+			assert_strings_equal ("read_ok", "1", scalar_text (l_db, "SELECT count(*) FROM ro.t;"))
+			assert_false ("insert_refused", run_modify (l_db, "INSERT INTO ro.t (id) VALUES (2);"))
+			assert_false ("create_refused", run_modify (l_db, "CREATE TABLE ro.t2 (x INTEGER);"))
+			assert_true ("detach_ok", run_modify (l_db, "DETACH DATABASE ro;"))
+			l_db.close
+			assert_false ("no_alternate_stream_file", file_exists ("file:uri_ro_fixture.db?mode=ro"))
+			delete_file ("uri_ro_fixture.db")
+		end
+
+	test_attach_uri_read_only_missing_file_errors
+			-- A missing file attached with mode=ro is an error, and no file is created.
+		local
+			l_db: SQLITE_DATABASE
+		do
+			delete_file ("uri_ro_missing.db")
+			create l_db.make (create {SQLITE_IN_MEMORY_SOURCE})
+			l_db.open_create_read_write
+			assert_false ("attach_fails", run_modify (l_db, "ATTACH DATABASE 'file:uri_ro_missing.db?mode=ro' AS ro;"))
+			l_db.close
+			assert_false ("not_created", file_exists ("uri_ro_missing.db"))
+		end
+
+	test_plain_path_with_hash_unchanged
+			-- A plain (non-URI) file name containing '#' still opens the file of exactly that name.
+		local
+			l_db: SQLITE_DATABASE
+		do
+			delete_file ("plain#name.db")
+			create l_db.make_create_read_write ("plain#name.db")
+			assert_true ("created_table", run_modify (l_db, "CREATE TABLE t (id INTEGER);"))
+			l_db.close
+			assert_true ("file_has_exact_name", file_exists ("plain#name.db"))
+			delete_file ("plain#name.db")
+		end
+
+	test_main_database_by_uri_read_only
+			-- A main database opened by a "file:" URI with mode=ro is read-only.
+		local
+			l_db: SQLITE_DATABASE
+		do
+			make_fixture ("uri_main_fixture.db")
+			create l_db.make (create {SQLITE_FILE_SOURCE}.make ("file:uri_main_fixture.db?mode=ro"))
+			l_db.open_create_read_write
+			assert_strings_equal ("read_ok", "1", scalar_text (l_db, "SELECT count(*) FROM t;"))
+			assert_false ("insert_refused", run_modify (l_db, "INSERT INTO t (id) VALUES (2);"))
+			l_db.close
+			delete_file ("uri_main_fixture.db")
+		end
+
 feature {NONE} -- Helpers
+
+	make_fixture (a_name: STRING)
+			-- Create database file `a_name' holding table t with one row.
+		local
+			l_db: SQLITE_DATABASE
+		do
+			delete_file (a_name)
+			create l_db.make_create_read_write (a_name)
+			assert_true ("fixture_table", run_modify (l_db, "CREATE TABLE t (id INTEGER PRIMARY KEY);"))
+			assert_true ("fixture_row", run_modify (l_db, "INSERT INTO t (id) VALUES (1);"))
+			l_db.close
+		end
+
+	run_modify (a_db: SQLITE_DATABASE; a_sql: STRING): BOOLEAN
+			-- Compile and execute `a_sql'; did it succeed?
+		local
+			l_stmt: SQLITE_MODIFY_STATEMENT
+		do
+			create l_stmt.make (a_sql, a_db)
+			if l_stmt.is_compiled then
+				l_stmt.execute
+				Result := not l_stmt.has_error
+			end
+			l_stmt.cleanup
+		end
+
+	file_exists (a_name: STRING): BOOLEAN
+			-- Does file `a_name' exist in the current folder?
+		do
+			Result := (create {RAW_FILE}.make_with_name (a_name)).exists
+		end
+
+	delete_file (a_name: STRING)
+			-- Delete file `a_name' if it exists.
+		local
+			l_file: RAW_FILE
+		do
+			create l_file.make_with_name (a_name)
+			if l_file.exists then
+				l_file.delete
+			end
+		end
 
 	is_refused (a_setter: PROCEDURE): BOOLEAN
 			-- Does calling `a_setter' raise (precondition or the guard's DEVELOPER_EXCEPTION)?

@@ -53,6 +53,18 @@ simple_sql.
 
 For complete compile flag documentation, see [COMPILE_FLAGS.md](COMPILE_FLAGS.md).
 
+### URI file names (read-only attach)
+
+Connections are opened with `SQLITE_OPEN_URI` (since 1.1.0). A name beginning with `file:` is a URI, so
+
+```sql
+ATTACH DATABASE 'file:other.db?mode=ro' AS other;
+```
+
+attaches `other.db` **read-only**, and fails if `other.db` does not exist. Before 1.1.0 the same statement
+silently created a writable file literally named `file:other.db?mode=ro`. Percent-encode `?`, `#` and `%` in
+a URI's path. Plain names (not starting with `file:`) are unaffected, including names with `?` or `#`.
+
 ### Eiffel callbacks are refused (known gap)
 
 `SQLITE_DATABASE.are_eiffel_callbacks_supported` is `False`. While the six externals above are `blocking`,

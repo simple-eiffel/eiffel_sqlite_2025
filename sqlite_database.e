@@ -779,11 +779,13 @@ feature {NONE} -- Basic operations
 			l_result: INTEGER
 			l_other_result: INTEGER
 		do
-				-- Set thread safety flags
+				-- Set thread safety flags. SQLITE_OPEN_URI: a name that starts with "file:" is a URI, here and
+				-- in ATTACH, so ATTACH 'file:x.db?mode=ro' really attaches read-only (without it SQLite
+				-- silently created a writable file named "file:x.db?mode=ro"). Other names are unaffected.
 			if {PLATFORM}.is_thread_capable and then sqlite_api.is_thread_safe then
-				l_flags := a_mode | SQLITE_OPEN_FULLMUTEX
+				l_flags := a_mode | SQLITE_OPEN_URI | SQLITE_OPEN_FULLMUTEX
 			else
-				l_flags := a_mode | SQLITE_OPEN_NOMUTEX
+				l_flags := a_mode | SQLITE_OPEN_URI | SQLITE_OPEN_NOMUTEX
 			end
 			internal_flags := l_flags
 
@@ -836,8 +838,8 @@ feature {NONE} -- Basic operations
 			end
 		ensure
 			internal_flags_set:
-				internal_flags = (a_mode.item | SQLITE_OPEN_FULLMUTEX) or
-				internal_flags = (a_mode.item | SQLITE_OPEN_NOMUTEX)
+				internal_flags = (a_mode.item | SQLITE_OPEN_URI | SQLITE_OPEN_FULLMUTEX) or
+				internal_flags = (a_mode.item | SQLITE_OPEN_URI | SQLITE_OPEN_NOMUTEX)
 		end
 
 feature {NONE} -- Basic operations: Callbacks

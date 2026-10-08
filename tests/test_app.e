@@ -26,6 +26,10 @@ feature {NONE} -- Initialization
 			run_test (agent library_tests.test_callbacks_reported_unsupported, "test_callbacks_reported_unsupported")
 			run_test (agent library_tests.test_callback_setters_refuse_eiffel_routines, "test_callback_setters_refuse_eiffel_routines")
 			run_test (agent library_tests.test_callback_setters_accept_void, "test_callback_setters_accept_void")
+			run_test (agent library_tests.test_attach_uri_read_only_refuses_writes, "test_attach_uri_read_only_refuses_writes")
+			run_test (agent library_tests.test_attach_uri_read_only_missing_file_errors, "test_attach_uri_read_only_missing_file_errors")
+			run_test (agent library_tests.test_plain_path_with_hash_unchanged, "test_plain_path_with_hash_unchanged")
+			run_test (agent library_tests.test_main_database_by_uri_read_only, "test_main_database_by_uri_read_only")
 			print ("%N========================%N")
 			print ("Results: " + passed.out + " passed, " + failed.out + " failed%N")
 			if failed > 0 then

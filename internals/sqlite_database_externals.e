@@ -287,6 +287,14 @@ feature -- Externals: Macros
 			"SQLITE_OPEN_FULLMUTEX"
 		end
 
+	SQLITE_OPEN_URI: INTEGER
+			-- Interpret a file name that starts with "file:" as a URI (main database and ATTACH).
+		external
+			"C macro use <sqlite3.h>"
+		alias
+			"SQLITE_OPEN_URI"
+		end
+
 ;note
 	copyright: "Copyright (c) 1984-2009, Eiffel Software"
 	license: "GPL version 2 (see http://www.eiffel.com/licensing/gpl.txt)"
