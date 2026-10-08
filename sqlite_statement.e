@@ -512,10 +512,12 @@ feature {SQLITE_STATEMENT} -- Basic operations: Execution
 			if not sqlite_success (l_result) then
 				if is_connected then
 					last_exception := l_db.last_exception
-					if l_locked then
-						l_locked := False
-						l_db.unlock -- (-1) 0
-					end
+				end
+					-- Release the lock even when the statement never compiled (not connected):
+					-- leaving it held made a later `close' fail its `not_is_locked' precondition.
+				if l_locked then
+					l_locked := False
+					l_db.unlock -- (-1) 0
 				end
 				if not attached last_exception then
 						-- No exception

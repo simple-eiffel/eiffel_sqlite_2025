@@ -450,6 +450,16 @@ feature -- Status report
 		attribute
 		end
 
+	is_autocommit: BOOLEAN
+			-- Is the connection in autocommit mode, that is, with no transaction open, as SQLite reports it?
+		require
+			is_interface_usable: is_interface_usable
+			is_accessible: is_accessible
+			not_is_closed: not is_closed
+		do
+			Result := sqlite3_get_autocommit (sqlite_api, internal_db) /= 0
+		end
+
 	is_closed: BOOLEAN
 			-- Indicates if the database is closed.
 		require
@@ -666,9 +676,10 @@ feature -- Basic operations: Transactions
 			create l_statement.make (l_stmt_string, Current)
 			l_statement.execute
 			l_statement.cleanup
-			is_in_transaction := True
+				-- BEGIN can fail (for example SQLITE_BUSY on an exclusive transaction): ask SQLite.
+			is_in_transaction := not is_autocommit
 		ensure
-			is_in_transaction: is_in_transaction
+			in_transaction_as_engine_reports: is_in_transaction = not is_autocommit
 		end
 
 	commit
@@ -684,9 +695,12 @@ feature -- Basic operations: Transactions
 			create l_statement.make (once "COMMIT TRANSACTION;", Current)
 			l_statement.execute
 			l_statement.cleanup
-			is_in_transaction := False
+				-- A failed COMMIT (for example SQLITE_BUSY, or a deferred foreign key violation) leaves
+				-- the transaction open, so the flag follows SQLite, not the attempt. The failure itself
+				-- is reported by `has_error' / `last_exception'.
+			is_in_transaction := not is_autocommit
 		ensure
-			not_is_in_transaction: not is_in_transaction
+			in_transaction_as_engine_reports: is_in_transaction = not is_autocommit
 		end
 
 	rollback
@@ -702,9 +716,10 @@ feature -- Basic operations: Transactions
 			create l_statement.make (once "ROLLBACK TRANSACTION;", Current)
 			l_statement.execute
 			l_statement.cleanup
-			is_in_transaction := False
+				-- ROLLBACK can fail (for example SQLITE_BUSY while a read is pending): ask SQLite.
+			is_in_transaction := not is_autocommit
 		ensure
-			not_is_in_transaction: not is_in_transaction
+			in_transaction_as_engine_reports: is_in_transaction = not is_autocommit
 		end
 
 feature {SQLITE_INTERNALS} -- Basic operations: Threading

@@ -41,6 +41,18 @@ All notable changes to this project will be documented in this file.
   before, including names containing `?` or `#` (tested with `plain#name.db`). Edge: a relative name that
   itself begins with `file:` is now parsed as a URI. No compile flag changed.
 
+- **A failed COMMIT no longer claims the transaction ended** (fork 02 F-9 item e). `commit` set
+  `is_in_transaction := False` unconditionally, even when COMMIT failed (for example SQLITE_BUSY or a deferred
+  foreign key violation) and SQLite kept the transaction open. `begin_transaction`, `commit` and `rollback`
+  now set the flag from SQLite's own state through the new query `is_autocommit`
+  (`sqlite3_get_autocommit`); their postconditions read `is_in_transaction = not is_autocommit`. The failure
+  is reported through `has_error` / `last_exception`. Behavior change: after a failed COMMIT,
+  `is_in_transaction` stays True, so the client must roll back (or retry the COMMIT) before `close`.
+- **A statement that failed to compile no longer leaves the connection locked.** `execute_internal`
+  released the database lock only when the statement was connected; executing a statement that never
+  compiled kept the lock, and a later `close` failed its `not_is_locked` precondition (fork 02 F-9 item h,
+  library half). The lock is now always released.
+
 ### Behavior changes clients may observe (3.31.1 to 3.53.4)
 - **REAL to text renders up to 17 significant digits** (was 15): values whose 15-digit text does not
   round-trip change, e.g. `CAST(0.1 + 0.2 AS TEXT)` = `0.30000000000000004`, `1.0 / 3` =

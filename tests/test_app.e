@@ -30,6 +30,9 @@ feature {NONE} -- Initialization
 			run_test (agent library_tests.test_attach_uri_read_only_missing_file_errors, "test_attach_uri_read_only_missing_file_errors")
 			run_test (agent library_tests.test_plain_path_with_hash_unchanged, "test_plain_path_with_hash_unchanged")
 			run_test (agent library_tests.test_main_database_by_uri_read_only, "test_main_database_by_uri_read_only")
+			run_test (agent library_tests.test_commit_failure_keeps_transaction_open, "test_commit_failure_keeps_transaction_open")
+			run_test (agent library_tests.test_commit_success_ends_transaction, "test_commit_success_ends_transaction")
+			run_test (agent library_tests.test_begin_failure_leaves_no_transaction, "test_begin_failure_leaves_no_transaction")
 			print ("%N========================%N")
 			print ("Results: " + passed.out + " passed, " + failed.out + " failed%N")
 			if failed > 0 then

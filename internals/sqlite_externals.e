@@ -111,6 +111,16 @@ feature -- Externals
 			is_class: class
 		end
 
+	c_sqlite3_get_autocommit (a_db: POINTER): INTEGER
+			-- Non-zero when the connection is in autocommit mode (no transaction open).
+		external
+			"C inline use <sqlite3.h>"
+		alias
+			"return (EIF_INTEGER)sqlite3_get_autocommit((sqlite3 *)$a_db)"
+		ensure
+			is_class: class
+		end
+
 	c_sqlite3_changes (a_db: POINTER): INTEGER
 		external
 			"C inline use <sqlite3.h>"

@@ -310,6 +310,68 @@ feature -- Test routines: URI file names (D7)
 			delete_file ("uri_main_fixture.db")
 		end
 
+feature -- Test routines: transaction state (F-9 e)
+
+	test_commit_failure_keeps_transaction_open
+			-- A COMMIT that fails (deferred foreign key violation) leaves the transaction open and says so.
+		local
+			l_db: SQLITE_DATABASE
+		do
+			create l_db.make (create {SQLITE_IN_MEMORY_SOURCE})
+			l_db.open_create_read_write
+			assert_true ("fk_on", run_modify (l_db, "PRAGMA foreign_keys = ON;"))
+			assert_true ("parent", run_modify (l_db, "CREATE TABLE p (id INTEGER PRIMARY KEY);"))
+			assert_true ("child", run_modify (l_db, "CREATE TABLE c (pid INTEGER REFERENCES p (id) DEFERRABLE INITIALLY DEFERRED);"))
+			l_db.begin_transaction (True)
+			assert_true ("in_transaction", l_db.is_in_transaction)
+			assert_true ("orphan_inserted", run_modify (l_db, "INSERT INTO c (pid) VALUES (42);"))
+			l_db.commit
+			assert_true ("commit_failed_reported", l_db.has_error)
+			assert_true ("still_in_transaction", l_db.is_in_transaction)
+			assert_false ("engine_agrees", l_db.is_autocommit)
+			l_db.rollback
+			assert_false ("rolled_back", l_db.is_in_transaction)
+			assert_true ("engine_autocommit", l_db.is_autocommit)
+			assert_strings_equal ("no_orphan_kept", "0", scalar_text (l_db, "SELECT count(*) FROM c;"))
+			l_db.close
+		end
+
+	test_commit_success_ends_transaction
+			-- A successful COMMIT ends the transaction.
+		local
+			l_db: SQLITE_DATABASE
+		do
+			create l_db.make (create {SQLITE_IN_MEMORY_SOURCE})
+			l_db.open_create_read_write
+			assert_true ("table", run_modify (l_db, "CREATE TABLE t (id INTEGER);"))
+			l_db.begin_transaction (True)
+			assert_true ("insert", run_modify (l_db, "INSERT INTO t (id) VALUES (1);"))
+			l_db.commit
+			assert_false ("no_error", l_db.has_error)
+			assert_false ("not_in_transaction", l_db.is_in_transaction)
+			assert_strings_equal ("committed", "1", scalar_text (l_db, "SELECT count(*) FROM t;"))
+			l_db.close
+		end
+
+	test_begin_failure_leaves_no_transaction
+			-- BEGIN EXCLUSIVE refused (another connection holds the lock) does not claim a transaction.
+		local
+			l_a, l_b: SQLITE_DATABASE
+		do
+			make_fixture ("busy_fixture.db")
+			create l_a.make_open_read_write ("busy_fixture.db")
+			create l_b.make_open_read_write ("busy_fixture.db")
+			l_a.begin_transaction (False)
+			assert_true ("a_holds_exclusive", l_a.is_in_transaction)
+			l_b.begin_transaction (False)
+			assert_true ("b_busy_reported", l_b.has_error)
+			assert_false ("b_not_in_transaction", l_b.is_in_transaction)
+			l_a.rollback
+			l_b.close
+			l_a.close
+			delete_file ("busy_fixture.db")
+		end
+
 feature {NONE} -- Helpers
 
 	make_fixture (a_name: STRING)

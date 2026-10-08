@@ -21,6 +21,15 @@ feature -- Measure
 			Result := {SQLITE_EXTERNALS}.c_sqlite3_changes (a_db)
 		end
 
+	sqlite3_get_autocommit (a_api: SQLITE_API; a_db: POINTER): INTEGER
+		require
+			a_api_attached: attached a_api
+			a_api_is_interface_usable: a_api.is_interface_usable
+			not_a_db_is_null: a_db /= default_pointer
+		do
+			Result := {SQLITE_EXTERNALS}.c_sqlite3_get_autocommit (a_db)
+		end
+
 	sqlite3_total_changes (a_api: SQLITE_API; a_db: POINTER): INTEGER
 		require
 			a_api_attached: attached a_api

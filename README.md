@@ -65,6 +65,12 @@ attaches `other.db` **read-only**, and fails if `other.db` does not exist. Befor
 silently created a writable file literally named `file:other.db?mode=ro`. Percent-encode `?`, `#` and `%` in
 a URI's path. Plain names (not starting with `file:`) are unaffected, including names with `?` or `#`.
 
+### Transaction state follows SQLite
+
+`begin_transaction`, `commit` and `rollback` set `is_in_transaction` from SQLite's own state
+(`is_autocommit`, since 1.1.0). A COMMIT that fails (for example SQLITE_BUSY) leaves the transaction open and
+`is_in_transaction` True; check `has_error`, then retry the COMMIT or roll back.
+
 ### Eiffel callbacks are refused (known gap)
 
 `SQLITE_DATABASE.are_eiffel_callbacks_supported` is `False`. While the six externals above are `blocking`,
