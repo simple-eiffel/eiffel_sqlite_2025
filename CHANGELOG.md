@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2026-10-08
+
+### Fixed
+- **Removing an action on a closed database failed.** `set_commit_action`, `set_rollback_action`,
+  `set_update_action`, `set_progress_handler` and `set_busy_handler` required `is_readable` (an open database)
+  even for `Void`, and then called `enable_*_callback (False)`, which also requires an open database. Now
+  `is_readable` is required only for an attached action, and on a closed database the setter only records
+  the action; `open` installs whatever is set. Test `test_void_actions_on_closed_database`: on 1.2.0 it fails
+  (`[is_readable]`, 33 passed, 1 failed); with the fix the runner gives 34 passed, 0 failed.
+
+### Corrected
+- **K2 (b) wording.** 1.2.0 said per-row re-entry costs latency. Controls (600,000 rows, 11 rounds per run,
+  worst root allocation, idle 1-3 ms) show otherwise:
+  - per-row update action that allocates nothing: 2 2 2 3 2 2 2 2 2 3 2 ms (1.2.0): the binding adds nothing
+    measurable;
+  - action allocating 20 x 256-byte strings: 14 25 24 17 21 20 12 15 19 18 18 ms (1.2.0);
+  - the same Eiffel work with no SQLite: 15 18 23 14 16 14 14 16 14 12 18 / 12 11 10 10 11 11 13 12 13 12 10 /
+    15 10 12 21 14 9 11 13 10 14 12 ms.
+  The 16 ms bar is missed by allocation-heavy callback bodies themselves. Keep per-row callbacks light.
+
+### Not adopted: deferred update events
+- A design that queued update and rollback events in C during the step and delivered them in Eiffel after it
+  (no per-row re-entry) was built, tested and measured on the unmerged branch `fix/k2b-deferred-update`
+  (commit 77d96b5). Its K2 (b) result was the same as 1.2.0 (light action 2-3 ms in both; heavy action within
+  the same noise), so it bought nothing for latency while adding a C queue, a delivery path in every step
+  and an ordering change (in an autocommit statement the commit action would run before that statement's
+  update events). It was not merged.
+
 ## [1.2.0] - 2026-10-08
 
 ### Added
@@ -43,10 +71,12 @@ All notable changes to this project will be documented in this file.
   Negative control, re-entry switched off in a SCOOP build: 3 of 3 runs failed (one ROUTINE_FAILURE after
   3,016 iterations, two hangs killed at 20 minutes), each where a busy callback makes a nested `blocking`
   call on another connection.
-- K2 (b), per-row update callback (600,000 rows, 20 x 256-byte strings per call) on a worker processor while
-  the root allocates: root worst allocation 13-24 ms in 10 of 11 rounds, 94 ms in one; the same Eiffel work
-  without SQLite: 10-15 ms; with re-entry switched off (unsafe, see the control above): 11-14 ms. **The 16 ms
-  bar is missed** for allocation-heavy per-row callbacks; re-entering the runtime per row costs latency.
+- K2 (b), per-row update callback (600,000 rows) on a worker processor while the root allocates. First runs
+  (action allocating 20 x 256-byte strings per call): root worst allocation 13-24 ms in 10 of 11 rounds, 94 ms
+  in one. **Corrected in 1.2.1** after control runs: the binding adds no measurable wait (an action that
+  allocates nothing gives 2-3 ms, the same as idle); the 16 ms bar is missed by allocation-heavy callback
+  bodies themselves (the same work with no SQLite gives 9-23 ms). The earlier line "re-entering the runtime
+  per row costs latency" was wrong.
 - simple_sql 1.3.3 against this version, all from clean: `simple_sql_tests` 77/0, full EQA 419/0, mock apps
   todo 36/0, cpm 27/0, habit_tracker 48/0, dms 64/0, wms 25/0.
 

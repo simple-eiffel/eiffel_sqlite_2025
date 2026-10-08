@@ -308,6 +308,43 @@ feature -- Test routines: reopen
 			delete_file ("hooks_reopen.db")
 		end
 
+feature -- Test routines: closed database
+
+	test_void_actions_on_closed_database
+			-- Removing every action while the database is closed works, and nothing comes back on reopen.
+			-- Before 1.2.1 each setter called enable_*_callback (False), whose precondition requires an
+			-- open database.
+		local
+			l_db: SQLITE_DATABASE
+		do
+			reset_counts
+			make_file_db ("hooks_closed.db")
+			create l_db.make_open_read_write ("hooks_closed.db")
+			install_all (l_db)
+			l_db.set_busy_handler (agent on_busy_three)
+			l_db.close
+			l_db.set_commit_action (Void)
+			l_db.set_rollback_action (Void)
+			l_db.set_update_action (Void)
+			l_db.set_progress_handler (Void)
+			l_db.set_busy_handler (Void)
+			assert_void ("commit_removed", l_db.commit_action)
+			assert_void ("rollback_removed", l_db.rollback_action)
+			assert_void ("update_removed", l_db.update_action)
+			assert_void ("progress_removed", l_db.progress_handler)
+			assert_void ("busy_removed", l_db.busy_handler)
+			l_db.open_read_write
+			reset_counts
+			l_db.begin_transaction (True)
+			assert_true ("insert", run_modify (l_db, "INSERT INTO t (x) WITH RECURSIVE c(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM c WHERE n < 2000) SELECT n FROM c;"))
+			l_db.commit
+			assert_integers_equal ("no_commit_call", 0, commit_calls)
+			assert_integers_equal ("no_update_calls", 0, update_calls)
+			assert_integers_equal ("no_progress_calls", 0, progress_calls)
+			l_db.close
+			delete_file ("hooks_closed.db")
+		end
+
 feature {NONE} -- Callbacks
 
 	commit_calls, rollback_calls, update_calls, progress_calls, busy_calls: INTEGER

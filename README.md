@@ -88,11 +88,14 @@ SQLite calls from inside `sqlite3_step` and the other `blocking` externals.
   hook answers safely: commit aborts (the transaction rolls back), progress interrupts the statement, busy
   stops waiting, update and rollback are ignored.
 - A callback must not use the connection that called it (SQLite forbids it). Another connection is fine.
-- **Cost:** a callback that SQLite calls once per row (update hook) re-enters the runtime every time. With a
-  heavily allocating per-row callback (600,000 rows), another processor's worst allocation wait was 13 to
-  24 ms in 10 of 11 rounds and 94 ms in one, against 10 to 15 ms for the same Eiffel work without SQLite;
-  the 16 ms bar is missed. Keep
-  per-row callbacks light where latency on other processors matters.
+- **Latency on other processors (K2 (b)).** The binding adds no measurable wait: with a per-row update action
+  that allocates nothing (600,000 rows), another processor's worst allocation wait is 2-3 ms, the same as
+  idle (1-3 ms). An action that allocates heavily (20 x 256-byte strings per row) gives 12-25 ms (one outlier of 94 ms), and the
+  same Eiffel work with no SQLite at all gives 9-23 ms: the 16 ms bar is missed by such callback bodies
+  themselves, not by SQLite or by re-entry. Keep per-row callbacks light where other processors' latency
+  matters.
+- Actions set while the database is closed (including `Void` to remove one) are remembered and installed by
+  the next `open` (1.2.1).
 
 `set_busy_timeout` (SQLite's own C busy wait) remains the cheaper way to wait for a lock.
 

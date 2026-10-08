@@ -49,6 +49,7 @@ feature {NONE} -- Initialization
 			run_test (agent hook_tests.test_commit_exception_aborts_commit, "test_commit_exception_aborts_commit")
 			run_test (agent hook_tests.test_progress_and_busy_exceptions_contained, "test_progress_and_busy_exceptions_contained")
 			run_test (agent hook_tests.test_hooks_survive_reopen, "test_hooks_survive_reopen")
+			run_test (agent hook_tests.test_void_actions_on_closed_database, "test_void_actions_on_closed_database")
 			print ("%N========================%N")
 			print ("Results: " + passed.out + " passed, " + failed.out + " failed%N")
 			if failed > 0 then

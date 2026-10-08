@@ -272,7 +272,7 @@ feature -- Element change
 		require
 			is_interface_usable: is_interface_usable
 			is_accessible: is_accessible
-			is_readable: is_readable
+			is_readable: attached a_function implies is_readable
 			not_is_closed: attached a_function implies not is_closed
 			already_set: attached a_function implies not attached commit_action
 			eiffel_callbacks_supported: attached a_function implies are_eiffel_callbacks_supported
@@ -281,7 +281,10 @@ feature -- Element change
 				refuse_eiffel_callback
 			end
 			commit_action := a_function
-			enable_commit_callback (attached a_function)
+				-- Closed: only remember the action; `open_internal' installs it on the next open.
+			if not is_closed then
+				enable_commit_callback (attached a_function)
+			end
 		ensure
 			commit_action_set: commit_action = a_function
 		end
@@ -295,7 +298,7 @@ feature -- Element change
 		require
 			is_interface_usable: is_interface_usable
 			is_accessible: is_accessible
-			is_readable: is_readable
+			is_readable: attached a_action implies is_readable
 			not_is_closed: attached a_action implies not is_closed
 			already_set: attached a_action implies not attached rollback_action
 			eiffel_callbacks_supported: attached a_action implies are_eiffel_callbacks_supported
@@ -304,7 +307,10 @@ feature -- Element change
 				refuse_eiffel_callback
 			end
 			rollback_action := a_action
-			enable_rollback_callback (attached a_action)
+				-- Closed: only remember the action; `open_internal' installs it on the next open.
+			if not is_closed then
+				enable_rollback_callback (attached a_action)
+			end
 		ensure
 			rollback_action_set: rollback_action = a_action
 		end
@@ -317,7 +323,7 @@ feature -- Element change
 		require
 			is_interface_usable: is_interface_usable
 			is_accessible: is_accessible
-			is_readable: is_readable
+			is_readable: attached a_action implies is_readable
 			not_is_closed: attached a_action implies not is_closed
 			already_set: attached a_action implies not attached update_action
 			eiffel_callbacks_supported: attached a_action implies are_eiffel_callbacks_supported
@@ -326,7 +332,10 @@ feature -- Element change
 				refuse_eiffel_callback
 			end
 			update_action := a_action
-			enable_update_callback (attached a_action)
+				-- Closed: only remember the action; `open_internal' installs it on the next open.
+			if not is_closed then
+				enable_update_callback (attached a_action)
+			end
 		ensure
 			update_action_set: update_action = a_action
 		end
@@ -338,7 +347,7 @@ feature -- Element change
 		require
 			is_interface_usable: is_interface_usable
 			is_accessible: is_accessible
-			is_readable: is_readable
+			is_readable: attached a_handler implies is_readable
 			not_is_closed: attached a_handler implies not is_closed
 			already_set: attached a_handler implies not attached progress_handler
 			eiffel_callbacks_supported: attached a_handler implies are_eiffel_callbacks_supported
@@ -347,7 +356,10 @@ feature -- Element change
 				refuse_eiffel_callback
 			end
 			progress_handler := a_handler
-			enable_progress_callback (attached a_handler)
+				-- Closed: only remember the action; `open_internal' installs it on the next open.
+			if not is_closed then
+				enable_progress_callback (attached a_handler)
+			end
 		ensure
 			progress_handler_set: progress_handler = a_handler
 		end
@@ -360,7 +372,7 @@ feature -- Element change
 		require
 			is_interface_usable: is_interface_usable
 			is_accessible: is_accessible
-			is_readable: is_readable
+			is_readable: attached a_handler implies is_readable
 			not_is_closed: attached a_handler implies not is_closed
 			already_set: attached a_handler implies not attached busy_handler
 			eiffel_callbacks_supported: attached a_handler implies are_eiffel_callbacks_supported
@@ -369,7 +381,10 @@ feature -- Element change
 				refuse_eiffel_callback
 			end
 			busy_handler := a_handler
-			enable_busy_callback (attached a_handler)
+				-- Closed: only remember the action; `open_internal' installs it on the next open.
+			if not is_closed then
+				enable_busy_callback (attached a_handler)
+			end
 		ensure
 			busy_handler_set: busy_handler = a_handler
 			busy_timeout_reset: attached a_handler implies busy_timeout = 0
