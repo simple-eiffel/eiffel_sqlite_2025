@@ -71,14 +71,30 @@ a URI's path. Plain names (not starting with `file:`) are unaffected, including 
 (`is_autocommit`, since 1.1.0). A COMMIT that fails (for example SQLITE_BUSY) leaves the transaction open and
 `is_in_transaction` True; check `has_error`, then retry the COMMIT or roll back.
 
-### Eiffel callbacks are refused (known gap)
+### Eiffel callbacks (hooks) are supported again (1.2.0)
 
-`SQLITE_DATABASE.are_eiffel_callbacks_supported` is `False`. While the six externals above are `blocking`,
-`esqlite.c` would call Eiffel code from inside them without re-entering the runtime, which crashes or fails
-silently. So `set_commit_action`, `set_rollback_action`, `set_update_action`, `set_progress_handler` and
-`set_busy_handler` refuse an attached routine: a precondition in contract-checked builds, and a
-`DEVELOPER_EXCEPTION` raised by the body in every build. Passing `Void` (unset) is still accepted.
-`set_busy_timeout` is unaffected: it uses SQLite's own C busy wait. Repairing the hooks is an open gap item.
+`set_commit_action`, `set_rollback_action`, `set_update_action`, `set_progress_handler` (with
+`set_progress_handler_period`, default 1000 instructions) and `set_busy_handler` install Eiffel routines that
+SQLite calls from inside `sqlite3_step` and the other `blocking` externals.
+`are_eiffel_callbacks_supported` is `True` again.
+
+- **Re-entry.** The C trampolines live in the header `Clib/esqlite_reentry.h` and are compiled into the
+  client's generated C, so they use the client target's own flags. In a concurrent target (SCOOP or
+  threads) they re-enter the Eiffel runtime and synchronize with a running GC before calling Eiffel
+  (`EIF_ENTER_EIFFEL; RTGC`) and leave it afterwards; in a non-concurrent target there is nothing to do and
+  no multithreaded runtime symbol is referenced, so the same library links in both.
+  `is_callback_reentry_active` says which applies. `esqlite.c` is no longer called.
+- **Exceptions in a callback never reach SQLite.** They are caught and kept in `last_callback_exception`; the
+  hook answers safely: commit aborts (the transaction rolls back), progress interrupts the statement, busy
+  stops waiting, update and rollback are ignored.
+- A callback must not use the connection that called it (SQLite forbids it). Another connection is fine.
+- **Cost:** a callback that SQLite calls once per row (update hook) re-enters the runtime every time. With a
+  heavily allocating per-row callback (600,000 rows), another processor's worst allocation wait was 13 to
+  24 ms in 10 of 11 rounds and 94 ms in one, against 10 to 15 ms for the same Eiffel work without SQLite;
+  the 16 ms bar is missed. Keep
+  per-row callbacks light where latency on other processors matters.
+
+`set_busy_timeout` (SQLite's own C busy wait) remains the cheaper way to wait for a lock.
 
 ---
 
@@ -174,7 +190,7 @@ Read these before upgrading a client (details in [CHANGELOG.md](CHANGELOG.md)):
 - **Reading the rowid of a VIEW or subquery is an error** (since 3.36.0).
 - **Math functions are real** (`sqrt(16.0)` gives `4.0`).
 - **`ENABLE_JSON1` no longer appears in `PRAGMA compile_options`**, although every JSON function works.
-- **Eiffel hooks are refused** (see above).
+- **Eiffel hooks** were refused in 1.1.0 and work again since 1.2.0 (see above).
 - `SQLITE_MAX_ATTACHED` is still 10.
 
 ---
@@ -200,7 +216,8 @@ eiffel_sqlite_2025/
 │   ├── sqlite3.c            SQLite 3.53.4 amalgamation
 │   ├── sqlite3.h            SQLite public header
 │   ├── sqlite3ext.h         SQLite extension header
-│   ├── esqlite.c            Eiffel-to-C callback glue
+│   ├── esqlite_reentry.h    Callback trampolines, compiled with the client's flags (1.2.0)
+│   ├── esqlite.c            Former callback glue (no longer called)
 │   ├── esqlite.h            Glue header (with EIF_NATURAL compatibility)
 │   └── Makefile             nmake build file (the authoritative flags)
 ├── binding/                 Bind-argument classes

@@ -108,6 +108,10 @@ exception on, so it does not interfere with the Eiffel runtime. To pin any of th
 Do not add `/DEIF_THREADS` to the `esqlite.c` build. It is inert for the stock `esqlite.c`, and re-entry code
 that depends on it breaks every non-concurrent (`concurrency use="none"`) link.
 
+Since 1.2.0 the callback re-entry code is in the header `Clib/esqlite_reentry.h`, which is compiled inside each
+client's generated C: concurrent clients get `EIF_THREADS` from their own build and non-concurrent ones do not,
+so no flag is needed here.
+
 ## Modifying Compile Flags
 
 To add or remove features, edit the `SQLITE_FLAGS` section in `Clib/Makefile`:

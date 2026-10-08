@@ -177,86 +177,119 @@ feature -- Basic operations: Threading
 
 feature -- Callbacks
 
-	sqlite3_progress_handler (a_api: SQLITE_API; a_db: POINTER; a_flags: INTEGER; a_cb_data: POINTER)
+	sqlite3_progress_handler (a_api: SQLITE_API; a_db: POINTER; a_period: INTEGER; a_cb_data: POINTER)
+			-- Call the progress callback every `a_period' virtual machine instructions with `a_cb_data';
+			-- a null `a_cb_data' removes the handler.
 		require
 			a_api_attached: attached a_api
 			a_api_is_interface_usable: a_api.is_interface_usable
 			not_a_db_is_null: a_db /= default_pointer
+			a_period_positive: a_cb_data /= default_pointer implies a_period > 0
 		do
-			{SQLITE_EXTERNALS}.c_sqlite3_progress_handler (a_db, a_flags, c_sqlite3_busy_callback, a_cb_data)
+			if a_cb_data = default_pointer then
+				{SQLITE_EXTERNALS}.c_sqlite3_progress_handler (a_db, 0, default_pointer, default_pointer)
+			else
+				{SQLITE_EXTERNALS}.c_sqlite3_progress_handler (a_db, a_period, c_sqlite3_progress_callback, a_cb_data)
+			end
 		end
 
 	sqlite3_busy_handler (a_api: SQLITE_API; a_db: POINTER; a_cb_data: POINTER): INTEGER
+			-- Install the busy callback with `a_cb_data'; a null `a_cb_data' removes it.
 		require
 			a_api_attached: attached a_api
 			a_api_is_interface_usable: a_api.is_interface_usable
 			not_a_db_is_null: a_db /= default_pointer
 		do
-			Result := {SQLITE_EXTERNALS}.c_sqlite3_busy_handler (a_db, c_sqlite3_busy_callback, a_cb_data)
+			Result := {SQLITE_EXTERNALS}.c_sqlite3_busy_handler (a_db, callback_or_null (c_sqlite3_busy_callback, a_cb_data), a_cb_data)
 		end
 
 	sqlite3_commit_hook (a_api: SQLITE_API; a_db: POINTER; a_cb_data: POINTER): POINTER
+			-- Install the commit callback with `a_cb_data' (null removes it); Result is the previous data.
 		require
 			a_api_attached: attached a_api
 			a_api_is_interface_usable: a_api.is_interface_usable
 			not_a_db_is_null: a_db /= default_pointer
 		do
-			Result := {SQLITE_EXTERNALS}.c_sqlite3_commit_hook (a_db, c_sqlite3_commit_callback, a_cb_data)
+			Result := {SQLITE_EXTERNALS}.c_sqlite3_commit_hook (a_db, callback_or_null (c_sqlite3_commit_callback, a_cb_data), a_cb_data)
 		end
 
 	sqlite3_rollback_hook (a_api: SQLITE_API; a_db: POINTER; a_cb_data: POINTER): POINTER
+			-- Install the rollback callback with `a_cb_data' (null removes it); Result is the previous data.
 		require
 			a_api_attached: attached a_api
 			a_api_is_interface_usable: a_api.is_interface_usable
 			not_a_db_is_null: a_db /= default_pointer
 		do
-			Result := {SQLITE_EXTERNALS}.c_sqlite3_rollback_hook (a_db, c_sqlite3_rollback_callback, a_cb_data)
+			Result := {SQLITE_EXTERNALS}.c_sqlite3_rollback_hook (a_db, callback_or_null (c_sqlite3_rollback_callback, a_cb_data), a_cb_data)
 		end
 
 	sqlite3_update_hook (a_api: SQLITE_API; a_db: POINTER; a_cb_data: POINTER): POINTER
+			-- Install the update callback with `a_cb_data' (null removes it); Result is the previous data.
 		require
 			a_api_attached: attached a_api
 			a_api_is_interface_usable: a_api.is_interface_usable
 			not_a_db_is_null: a_db /= default_pointer
 		do
-			Result := {SQLITE_EXTERNALS}.c_sqlite3_update_hook (a_db, c_sqlite3_update_callback, a_cb_data)
+			Result := {SQLITE_EXTERNALS}.c_sqlite3_update_hook (a_db, callback_or_null (c_sqlite3_update_callback, a_cb_data), a_cb_data)
+		end
+
+	callback_reentry_mode: INTEGER
+			-- 1 when the callback trampolines re-enter the Eiffel runtime (concurrent target),
+			-- 0 when they need not (non-concurrent target). Decided by the client target's flags.
+		external
+			"C inline use %"esqlite_reentry.h%""
+		alias
+			"return ESQ_REENTRY_MODE;"
+		end
+
+feature {NONE} -- Implementation: Callbacks
+
+	callback_or_null (a_callback, a_cb_data: POINTER): POINTER
+			-- `a_callback', or null when there is no data (SQLite then removes the hook).
+		do
+			if a_cb_data /= default_pointer then
+				Result := a_callback
+			end
 		end
 
 feature {NONE} -- Externals: Eiffel callbacks
 
+		-- The trampolines live in esqlite_reentry.h and are compiled into the client's generated C,
+		-- with the client target's flags (see that header). esqlite.c's functions are no longer used.
+
 	c_sqlite3_progress_callback: POINTER
 		external
-			"C inline use %"esqlite.h%""
+			"C inline use %"esqlite_reentry.h%""
 		alias
-			"return c_esqlite3_progress_callback"
+			"return (EIF_POINTER) esq_progress_trampoline;"
 		end
 
 	c_sqlite3_busy_callback: POINTER
 		external
-			"C inline use %"esqlite.h%""
+			"C inline use %"esqlite_reentry.h%""
 		alias
-			"return c_esqlite3_busy_callback"
+			"return (EIF_POINTER) esq_busy_trampoline;"
 		end
 
 	c_sqlite3_commit_callback: POINTER
 		external
-			"C inline use %"esqlite.h%""
+			"C inline use %"esqlite_reentry.h%""
 		alias
-			"return c_esqlite3_commit_callback"
+			"return (EIF_POINTER) esq_commit_trampoline;"
 		end
 
 	c_sqlite3_rollback_callback: POINTER
 		external
-			"C inline use %"esqlite.h%""
+			"C inline use %"esqlite_reentry.h%""
 		alias
-			"return c_esqlite3_rollback_callback"
+			"return (EIF_POINTER) esq_rollback_trampoline;"
 		end
 
 	c_sqlite3_update_callback: POINTER
 		external
-			"C inline use %"esqlite.h%""
+			"C inline use %"esqlite_reentry.h%""
 		alias
-			"return c_esqlite3_update_callback"
+			"return (EIF_POINTER) esq_update_trampoline;"
 		end
 
 feature -- Externals: Macros

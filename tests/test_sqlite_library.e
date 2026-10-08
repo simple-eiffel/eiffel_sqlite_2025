@@ -203,32 +203,39 @@ feature -- Test routines: engine (3.53.4 upgrade)
 
 feature -- Test routines: callback guard
 
-	test_callbacks_reported_unsupported
-			-- The guard constant reports that Eiffel callbacks may not be installed.
+	test_callbacks_reported_supported
+			-- Since 1.2.0 the guard is lifted: Eiffel callbacks may be installed.
 		local
 			l_db: SQLITE_DATABASE
 		do
 			create l_db.make (create {SQLITE_IN_MEMORY_SOURCE})
-			assert_false ("unsupported", l_db.are_eiffel_callbacks_supported)
+			assert_true ("supported", l_db.are_eiffel_callbacks_supported)
 		end
 
-	test_callback_setters_refuse_eiffel_routines
-			-- Each of the five setters refuses an attached routine and installs nothing.
+	test_callback_setters_accept_eiffel_routines
+			-- Each of the five setters installs an attached routine, and Void removes it again.
 		local
 			l_db: SQLITE_DATABASE
 		do
 			create l_db.make (create {SQLITE_IN_MEMORY_SOURCE})
 			l_db.open_create_read_write
-			assert_true ("commit_refused", is_refused (agent l_db.set_commit_action (agent: BOOLEAN do end)))
-			assert_void ("commit_not_set", l_db.commit_action)
-			assert_true ("rollback_refused", is_refused (agent l_db.set_rollback_action (agent do end)))
-			assert_void ("rollback_not_set", l_db.rollback_action)
-			assert_true ("update_refused", is_refused (agent l_db.set_update_action (agent (a: INTEGER; d, t: STRING; r: INTEGER_64) do end)))
-			assert_void ("update_not_set", l_db.update_action)
-			assert_true ("progress_refused", is_refused (agent l_db.set_progress_handler (agent: BOOLEAN do end)))
-			assert_void ("progress_not_set", l_db.progress_handler)
-			assert_true ("busy_refused", is_refused (agent l_db.set_busy_handler (agent (c: NATURAL): BOOLEAN do end)))
-			assert_void ("busy_not_set", l_db.busy_handler)
+			l_db.set_commit_action (agent: BOOLEAN do end)
+			assert_attached ("commit_set", l_db.commit_action)
+			l_db.set_rollback_action (agent do end)
+			assert_attached ("rollback_set", l_db.rollback_action)
+			l_db.set_update_action (agent (a: INTEGER; d, t: STRING; r: INTEGER_64) do end)
+			assert_attached ("update_set", l_db.update_action)
+			l_db.set_progress_handler (agent: BOOLEAN do end)
+			assert_attached ("progress_set", l_db.progress_handler)
+			l_db.set_busy_handler (agent (c: NATURAL): BOOLEAN do end)
+			assert_attached ("busy_set", l_db.busy_handler)
+			l_db.set_commit_action (Void)
+			l_db.set_rollback_action (Void)
+			l_db.set_update_action (Void)
+			l_db.set_progress_handler (Void)
+			l_db.set_busy_handler (Void)
+			assert_void ("commit_removed", l_db.commit_action)
+			assert_void ("busy_removed", l_db.busy_handler)
 			l_db.close
 		end
 
@@ -414,20 +421,6 @@ feature {NONE} -- Helpers
 			if l_file.exists then
 				l_file.delete
 			end
-		end
-
-	is_refused (a_setter: PROCEDURE): BOOLEAN
-			-- Does calling `a_setter' raise (precondition or the guard's DEVELOPER_EXCEPTION)?
-		local
-			l_raised: BOOLEAN
-		do
-			if not l_raised then
-				a_setter.call (Void)
-			end
-			Result := l_raised
-		rescue
-			l_raised := True
-			retry
 		end
 
 	scalar_text (a_db: SQLITE_DATABASE; a_sql: STRING): STRING

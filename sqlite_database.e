@@ -386,11 +386,61 @@ feature -- Element change
 
 feature -- Status report: Callbacks
 
-	are_eiffel_callbacks_supported: BOOLEAN = False
+	are_eiffel_callbacks_supported: BOOLEAN = True
 			-- May an Eiffel commit, rollback, update, progress or busy routine be installed?
-			-- False while `step', `prepare', `open', `close' and `backup_step' are `blocking' externals:
-			-- esqlite.c calls Eiffel from inside them without re-entering the runtime.
-			-- `set_busy_timeout' is unaffected (SQLite's own C busy wait).
+			-- True since 1.2.0: the callback trampolines (Clib/esqlite_reentry.h) are compiled with the
+			-- client target's flags and re-enter the Eiffel runtime around every call made from inside a
+			-- `blocking' external (concurrent targets); in non-concurrent targets no re-entry is needed.
+			-- (Was False in 1.1.0, when esqlite.c called Eiffel without re-entering the runtime.)
+
+	is_callback_reentry_active: BOOLEAN
+			-- Do the callback trampolines re-enter the Eiffel runtime in this system?
+			-- True in a concurrent (SCOOP or threads) target, False in a non-concurrent one.
+		do
+			Result := callback_reentry_mode = 1
+		end
+
+	last_callback_exception: detachable EXCEPTION
+			-- Exception raised by the last Eiffel callback that failed, if any.
+			-- A callback's exception never propagates into SQLite: it is caught here, and the hook
+			-- answers safely (commit: abort, so the transaction rolls back; progress: interrupt;
+			-- busy: stop waiting; update and rollback: ignored).
+
+	progress_handler_period: INTEGER
+			-- Number of SQLite virtual machine instructions between calls to `progress_handler'.
+		do
+			Result := internal_progress_handler_period
+			if Result <= 0 then
+				Result := default_progress_handler_period
+			end
+		ensure
+			positive: Result > 0
+		end
+
+	default_progress_handler_period: INTEGER = 1000
+			-- Default for `progress_handler_period'.
+
+	set_progress_handler_period (a_period: INTEGER)
+			-- Call `progress_handler' every `a_period' virtual machine instructions.
+		require
+			a_period_positive: a_period > 0
+			is_accessible: is_accessible
+		do
+			internal_progress_handler_period := a_period
+			if attached progress_handler and then not is_closed then
+				sqlite3_progress_handler (sqlite_api, internal_db, a_period, internal_progress_handler_data)
+			end
+		ensure
+			period_set: progress_handler_period = a_period
+		end
+
+	clear_last_callback_exception
+			-- Forget `last_callback_exception'.
+		do
+			last_callback_exception := Void
+		ensure
+			cleared: last_callback_exception = Void
+		end
 
 feature {NONE} -- Callback guard
 
@@ -878,8 +928,8 @@ feature {NONE} -- Basic operations: Callbacks
 				l_data := sqlite3_commit_hook (sqlite_api, internal_db, l_data)
 				check no_old_callback: l_data = default_pointer end
 			else
-					-- Prevent callbacks from SQLite
-				l_data := sqlite3_update_hook (sqlite_api, internal_db, default_pointer)
+					-- Prevent callbacks from SQLite (this removed the UPDATE hook before 1.2.0)
+				l_data := sqlite3_commit_hook (sqlite_api, internal_db, default_pointer)
 				if l_data /= default_pointer then
 					free_cb_data (l_data)
 				end
@@ -887,14 +937,21 @@ feature {NONE} -- Basic operations: Callbacks
 		end
 
 	on_commit_callback: BOOLEAN
-			-- Called back from the wrapper implementation in the Eiffel C code.
-		require
-			is_interface_usable: is_interface_usable
-			not_is_closed: not is_closed
+			-- Called back by SQLite (through esq_commit_trampoline) when a transaction commits.
+			-- True aborts the commit (SQLite rolls back); so does an exception in `commit_action'.
+			-- No precondition: this is called from C, and nothing may propagate back into SQLite.
+		local
+			l_failed: BOOLEAN
 		do
-			if attached commit_action as l_action then
+			if l_failed then
+				Result := True
+			elseif attached commit_action as l_action then
 				Result := l_action.item (Void)
 			end
+		rescue
+			note_callback_exception
+			l_failed := True
+			retry
 		end
 
 	enable_rollback_callback (a_enable: BOOLEAN)
@@ -916,8 +973,8 @@ feature {NONE} -- Basic operations: Callbacks
 				l_data := sqlite3_rollback_hook (sqlite_api, internal_db, l_data)
 				check no_old_callback: l_data = default_pointer end
 			else
-					-- Prevent callbacks from SQLite
-				l_data := sqlite3_update_hook (sqlite_api, internal_db, default_pointer)
+					-- Prevent callbacks from SQLite (this removed the UPDATE hook before 1.2.0)
+				l_data := sqlite3_rollback_hook (sqlite_api, internal_db, default_pointer)
 				if l_data /= default_pointer then
 					free_cb_data (l_data)
 				end
@@ -927,16 +984,18 @@ feature {NONE} -- Basic operations: Callbacks
 		end
 
 	on_rollback_callback
-			-- Called back from the wrapper implementation in the Eiffel C code.
-		require
-			is_interface_usable: is_interface_usable
-			not_is_closed: not is_closed
+			-- Called back by SQLite (through esq_rollback_trampoline) when a transaction rolls back.
+			-- An exception in `rollback_action' is caught and kept in `last_callback_exception'.
+		local
+			l_failed: BOOLEAN
 		do
-			if attached rollback_action as l_action then
+			if not l_failed and then attached rollback_action as l_action then
 				l_action.call (Void)
 			end
-		ensure
-			not_is_closed: not is_closed
+		rescue
+			note_callback_exception
+			l_failed := True
+			retry
 		end
 
 	enable_update_callback (a_enable: BOOLEAN)
@@ -967,22 +1026,22 @@ feature {NONE} -- Basic operations: Callbacks
 		end
 
 	on_update_callback (a_action: INTEGER; a_db_name: POINTER; a_tb_name: POINTER; a_row_id: INTEGER_64)
-			-- Called back from the wrapper implementation in the Eiffel C code.
-		require
-			is_interface_usable: is_interface_usable
-			not_is_closed: not is_closed
-			valid_update_action: (create {SQLITE_UPDATE_ACTION}).is_valid_update_action (a_action)
+			-- Called back by SQLite (through esq_update_trampoline) for each inserted, updated or
+			-- deleted row. An exception in `update_action' is caught and kept in `last_callback_exception'.
 		local
 			l_db_name: STRING
 			l_tb_name: STRING
+			l_failed: BOOLEAN
 		do
-			if attached update_action as l_action then
+			if not l_failed and then attached update_action as l_action then
 				create l_db_name.make_from_c (a_db_name)
 				create l_tb_name.make_from_c (a_tb_name)
 				l_action.call ([a_action, l_db_name, l_tb_name, a_row_id])
 			end
-		ensure
-			not_is_closed: not is_closed
+		rescue
+			note_callback_exception
+			l_failed := True
+			retry
 		end
 
 	enable_progress_callback (a_enable: BOOLEAN)
@@ -993,15 +1052,15 @@ feature {NONE} -- Basic operations: Callbacks
 			is_interface_usable: is_interface_usable
 			not_is_closed: not is_closed
 			progress_handler_attached: a_enable implies attached progress_handler
-		local
-			l_data: POINTER
 		do
 			if a_enable then
-					-- Create the callback data
-				internal_progress_handler_data := new_cb_data ($on_busy, $Current)
-
-					-- Request callbacls from SQLite
-				sqlite3_progress_handler (sqlite_api, internal_db, 1, l_data)
+				if internal_progress_handler_data /= default_pointer then
+					free_cb_data (internal_progress_handler_data)
+				end
+					-- Before 1.2.0 this registered `on_busy' (wrong routine), passed null data and
+					-- a period of 1 instruction.
+				internal_progress_handler_data := new_cb_data ($on_progress, $Current)
+				sqlite3_progress_handler (sqlite_api, internal_db, progress_handler_period, internal_progress_handler_data)
 			else
 					-- Prevent callbacks from SQLite
 				sqlite3_progress_handler (sqlite_api, internal_db, 0, default_pointer)
@@ -1015,18 +1074,20 @@ feature {NONE} -- Basic operations: Callbacks
 		end
 
 	on_progress: BOOLEAN
-			-- Called when the database is running a long running action.
-			--
-			-- `Result': True to abort the statement; False to continue processing.
-		require
-			is_interface_usable: is_interface_usable
-			not_is_closed: not is_closed
+			-- Called back by SQLite (through esq_progress_trampoline) every `progress_handler_period'
+			-- instructions. `Result': True to interrupt the statement (also after an exception).
+		local
+			l_failed: BOOLEAN
 		do
-			if attached progress_handler as l_action then
+			if l_failed then
+				Result := True
+			elseif attached progress_handler as l_action then
 				Result := l_action.item (Void)
 			end
-		ensure
-			not_is_closed: not is_closed
+		rescue
+			note_callback_exception
+			l_failed := True
+			retry
 		end
 
 	enable_busy_callback (a_enable: BOOLEAN)
@@ -1041,6 +1102,9 @@ feature {NONE} -- Basic operations: Callbacks
 			l_result: INTEGER
 		do
 			if a_enable then
+				if internal_busy_handler_data /= default_pointer then
+					free_cb_data (internal_busy_handler_data)
+				end
 					-- Create the callback data
 				internal_busy_handler_data := new_cb_data ($on_busy, $Current)
 
@@ -1065,19 +1129,26 @@ feature {NONE} -- Basic operations: Callbacks
 		end
 
 	on_busy (a_count: NATURAL): BOOLEAN
-			-- Called when the database is busy, allowing reprocessing of a statement.
+			-- Called back by SQLite (through esq_busy_trampoline) when the database is busy.
 			--
 			-- `a_count': Number of times the busy handler has been called.
-			-- `Result': True to continue waiting; False to return a busy signal.
-		require
-			is_interface_usable: is_interface_usable
-			not_is_closed: not is_closed
+			-- `Result': True to continue waiting; False to return a busy signal (also after an exception).
+		local
+			l_failed: BOOLEAN
 		do
-			if attached busy_handler as l_action then
+			if not l_failed and then attached busy_handler as l_action then
 				Result := l_action.item ([a_count])
 			end
-		ensure
-			not_is_closed: not is_closed
+		rescue
+			note_callback_exception
+			l_failed := True
+			retry
+		end
+
+	note_callback_exception
+			-- Keep the exception being handled in `last_callback_exception'.
+		do
+			last_callback_exception := {EXCEPTION_MANAGER_FACTORY}.exception_manager.last_exception
 		end
 
 feature {SQLITE_INTERNALS, SQLITE_BACKUP_EXTERNALS} -- Implementation
@@ -1102,6 +1173,9 @@ feature {NONE} -- Implementation
 
 	internal_busy_handler_data: POINTER
 			-- Data used to call back a busy handler.
+
+	internal_progress_handler_period: INTEGER
+			-- Period set by `set_progress_handler_period' (0: default).
 
 feature {NONE} -- Externals
 

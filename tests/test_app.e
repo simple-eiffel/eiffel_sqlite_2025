@@ -23,8 +23,8 @@ feature {NONE} -- Initialization
 			run_test (agent library_tests.test_real_text_has_17_digits, "test_real_text_has_17_digits")
 			run_test (agent library_tests.test_math_functions_available, "test_math_functions_available")
 			run_test (agent library_tests.test_json_still_available, "test_json_still_available")
-			run_test (agent library_tests.test_callbacks_reported_unsupported, "test_callbacks_reported_unsupported")
-			run_test (agent library_tests.test_callback_setters_refuse_eiffel_routines, "test_callback_setters_refuse_eiffel_routines")
+			run_test (agent library_tests.test_callbacks_reported_supported, "test_callbacks_reported_supported")
+			run_test (agent library_tests.test_callback_setters_accept_eiffel_routines, "test_callback_setters_accept_eiffel_routines")
 			run_test (agent library_tests.test_callback_setters_accept_void, "test_callback_setters_accept_void")
 			run_test (agent library_tests.test_attach_uri_read_only_refuses_writes, "test_attach_uri_read_only_refuses_writes")
 			run_test (agent library_tests.test_attach_uri_read_only_missing_file_errors, "test_attach_uri_read_only_missing_file_errors")
@@ -33,6 +33,22 @@ feature {NONE} -- Initialization
 			run_test (agent library_tests.test_commit_failure_keeps_transaction_open, "test_commit_failure_keeps_transaction_open")
 			run_test (agent library_tests.test_commit_success_ends_transaction, "test_commit_success_ends_transaction")
 			run_test (agent library_tests.test_begin_failure_leaves_no_transaction, "test_begin_failure_leaves_no_transaction")
+			create hook_tests
+			print ("Callback re-entry active: " + (create {SQLITE_DATABASE}.make (create {SQLITE_IN_MEMORY_SOURCE})).is_callback_reentry_active.out + "%N")
+			run_test (agent hook_tests.test_callbacks_supported, "test_callbacks_supported")
+			run_test (agent hook_tests.test_commit_hook_fires, "test_commit_hook_fires")
+			run_test (agent hook_tests.test_commit_hook_can_abort, "test_commit_hook_can_abort")
+			run_test (agent hook_tests.test_rollback_hook_fires, "test_rollback_hook_fires")
+			run_test (agent hook_tests.test_update_hook_data, "test_update_hook_data")
+			run_test (agent hook_tests.test_progress_handler_fires_and_interrupts, "test_progress_handler_fires_and_interrupts")
+			run_test (agent hook_tests.test_busy_handler_fires, "test_busy_handler_fires")
+			run_test (agent hook_tests.test_disabling_commit_keeps_others, "test_disabling_commit_keeps_others")
+			run_test (agent hook_tests.test_disabling_rollback_keeps_others, "test_disabling_rollback_keeps_others")
+			run_test (agent hook_tests.test_disabling_update_and_progress_keeps_others, "test_disabling_update_and_progress_keeps_others")
+			run_test (agent hook_tests.test_update_exception_contained, "test_update_exception_contained")
+			run_test (agent hook_tests.test_commit_exception_aborts_commit, "test_commit_exception_aborts_commit")
+			run_test (agent hook_tests.test_progress_and_busy_exceptions_contained, "test_progress_and_busy_exceptions_contained")
+			run_test (agent hook_tests.test_hooks_survive_reopen, "test_hooks_survive_reopen")
 			print ("%N========================%N")
 			print ("Results: " + passed.out + " passed, " + failed.out + " failed%N")
 			if failed > 0 then
@@ -45,6 +61,7 @@ feature {NONE} -- Initialization
 feature {NONE} -- Implementation
 
 	library_tests: TEST_SQLITE_LIBRARY
+	hook_tests: TEST_SQLITE_HOOKS
 
 	passed: INTEGER
 	failed: INTEGER
@@ -61,8 +78,12 @@ feature {NONE} -- Implementation
 			end
 		rescue
 			print ("  FAIL: " + a_name)
-			if attached {EXCEPTION_MANAGER_FACTORY}.exception_manager.last_exception as l_ex and then attached l_ex.tag as l_tag then
-				print (" [" + {UTF_CONVERTER}.string_32_to_utf_8_string_8 (l_tag) + "]")
+			if attached {EXCEPTION_MANAGER_FACTORY}.exception_manager.last_exception as l_ex then
+				if attached l_ex.description as l_desc then
+					print (" [" + {UTF_CONVERTER}.string_32_to_utf_8_string_8 (l_desc) + "]")
+				elseif attached l_ex.tag as l_tag then
+					print (" [" + {UTF_CONVERTER}.string_32_to_utf_8_string_8 (l_tag) + "]")
+				end
 			end
 			print ("%N")
 			failed := failed + 1

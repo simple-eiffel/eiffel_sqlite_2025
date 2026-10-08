@@ -2,6 +2,54 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-10-08
+
+### Added
+- **Eiffel hooks work under the `blocking` externals; the guard is lifted** (fork 04 verdict, ship plan step 8).
+  `are_eiffel_callbacks_supported` is `True`. New: `is_callback_reentry_active`, `last_callback_exception`,
+  `clear_last_callback_exception`, `progress_handler_period`, `set_progress_handler_period` (default 1000).
+- **Re-entry without a compile flag.** The callback trampolines moved from `esqlite.c` (one precompiled object)
+  to the header `Clib/esqlite_reentry.h`, reached through `C inline use` externals, so they compile inside each
+  client's generated C with that client's flags. In concurrent targets they re-enter the runtime
+  (`EIF_ENTER_EIFFEL; RTGC` ... `EIF_EXIT_EIFFEL`, only when the thread is outside Eiffel code); in
+  `concurrency use="none"` targets the macros are empty and nothing from the multithreaded runtime is
+  referenced. No `/DEIF_THREADS`, no ECF condition, no new object; `Clib` objects unchanged.
+- **Exceptions in callbacks are contained.** Each callback routine catches its exception (kept in
+  `last_callback_exception`) and answers SQLite safely: commit aborts (rollback), progress interrupts, busy
+  stops waiting, update and rollback are ignored. Nothing unwinds through SQLite's frames.
+
+### Fixed (D-16 wiring)
+- Removing the commit action or the rollback action called `sqlite3_update_hook`, so it removed the
+  **update** hook and left the commit or rollback hook installed. Each now removes its own hook.
+- The progress handler registered `on_busy` (a routine with a different signature) through the busy-callback
+  trampoline, passed null data, and ran every VM instruction. It now registers `on_progress` with its own
+  data and trampoline, every `progress_handler_period` instructions.
+- Commit, progress and busy callbacks return Eiffel `BOOLEAN` (one byte) but were called through
+  `EIF_INTEGER`-returning pointers, so the upper bytes were garbage. The trampolines now use `EIF_BOOLEAN`.
+- Removing a hook passed a null data pointer with a non-null callback; it now passes a null callback.
+- Callback routines no longer carry preconditions (they are called from C); re-enabling a handler frees
+  the previous callback data.
+
+### Tests and measurements
+- `TEST_SQLITE_HOOKS` (14 tests): every hook fires with the right data (update: action code, `main`, table,
+  rowid; busy: counts 0,1,2,3; progress: many calls at period 100, interrupt on True); removing each hook
+  leaves the others working; an exception in the update, commit, progress or busy callback leaves the
+  connection usable; hooks survive close and reopen. Library runner: 33 passed, 0 failed.
+- Stress spike (4 processors x 1,000 iterations; commit, rollback, update, progress and busy callbacks;
+  callbacks allocate, force collections and raise; a busy callback releases a lock on another connection):
+  identical totals in SCOOP DBC, SCOOP lean, non-concurrent DBC and non-concurrent lean builds: 4,000
+  iterations, 3,664 commit, 1,528 rollback, 80,232 update, 8,000 progress and 696 busy callbacks, 600
+  exceptions contained, 0 bad results, 0 errors, exit 0 (SCOOP builds run 3 times each, same totals).
+  Negative control, re-entry switched off in a SCOOP build: 3 of 3 runs failed (one ROUTINE_FAILURE after
+  3,016 iterations, two hangs killed at 20 minutes), each where a busy callback makes a nested `blocking`
+  call on another connection.
+- K2 (b), per-row update callback (600,000 rows, 20 x 256-byte strings per call) on a worker processor while
+  the root allocates: root worst allocation 13-24 ms in 10 of 11 rounds, 94 ms in one; the same Eiffel work
+  without SQLite: 10-15 ms; with re-entry switched off (unsafe, see the control above): 11-14 ms. **The 16 ms
+  bar is missed** for allocation-heavy per-row callbacks; re-entering the runtime per row costs latency.
+- simple_sql 1.3.3 against this version, all from clean: `simple_sql_tests` 77/0, full EQA 419/0, mock apps
+  todo 36/0, cpm 27/0, habit_tracker 48/0, dms 64/0, wms 25/0.
+
 ## [1.1.0] - 2026-10-08
 
 ### Corrected history (read first)
