@@ -113,7 +113,8 @@ feature {NONE} -- Clean up
 							l_result := sqlite3_finalize (l_api, l_stmt)
 							if (l_result & {SQLITE_RESULT_CODE}.mask) = {SQLITE_RESULT_CODE}.e_misuse then
 									-- Happens when the DB was closed before the statement was finalized.
-								check is_closed: database.is_closed end
+									-- Not checked against `database.is_closed': that query is bound to the
+									-- connection's thread, and `dispose' runs on whichever thread reclaims.
 							else
 								check succeess: sqlite_success (l_result) end
 							end

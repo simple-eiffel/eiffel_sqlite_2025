@@ -79,4 +79,15 @@
 		<library name="simple_testing" location="$SIMPLE_EIFFEL/simple_testing/simple_testing.ecf"/>
 		<cluster name="tests" location=".\tests\" recursive="true"/>
 	</target>
+	<target name="sqlite_2025_scoop_test" extends="sqlite_2025">
+		<root class="SQLITE_DISPOSE_TEST_APP" feature="make"/>
+		<option warning="warning">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<setting name="console_application" value="true"/>
+		<capability>
+			<concurrency support="scoop" use="scoop"/>
+		</capability>
+		<cluster name="tests_scoop" location=".\tests_scoop\" recursive="true"/>
+	</target>
 </system>

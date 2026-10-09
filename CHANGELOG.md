@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- `SQLITE_DATABASE.dispose` closes the raw handle with `sqlite3_close_v2` (zombie close) through a new
+  non-`blocking` external, `c_sqlite3_close_v2_reclaiming`, instead of calling `close`: `close` checks that it
+  runs on the opening thread and may run Eiffel hooks, and `dispose` runs on whichever thread reclaims the
+  object, possibly mid-collection. SQLite is built `SQLITE_THREADSAFE=1`, so any thread may close the
+  connection; a database with Eiffel hooks never reaches `dispose` (each hook pins it with `eif_protect`).
+- `SQLITE_STATEMENT.dispose` no longer checks `database.is_closed` (bound to the connection's thread) in its
+  SQLITE_MISUSE branch.
+- SCOOP proof `sqlite_2025_scoop_test`: connections dropped on a worker processor and on the root are all
+  reclaimed (instance count 0) and the process lives.
+
 ## [1.2.1] - 2026-10-08
 
 ### Fixed

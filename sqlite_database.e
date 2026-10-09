@@ -113,9 +113,19 @@ feature {NONE} -- Clean up
 
 	dispose
 			-- <Precursor>
+			-- Runs on whichever thread reclaims the object. Under SCOOP or threads that is
+			-- often not the thread that opened the connection, and it may be in the middle
+			-- of a collection, so this checks no thread affinity, calls no Eiffel hook and
+			-- runs no SQL: it hands the raw handle to SQLite (built SQLITE_THREADSAFE=1, so
+			-- any thread may close it) as a zombie, freed once its last statement is
+			-- finalized. A connection with Eiffel hooks never gets here: each hook keeps
+			-- the database alive through eif_protect until it is removed.
+		local
+			l_result: INTEGER
 		do
-			if not is_in_final_collect then
-				close
+			if not is_in_final_collect and then internal_db /= default_pointer then
+				l_result := {SQLITE_EXTERNALS}.c_sqlite3_close_v2_reclaiming (internal_db)
+				internal_db := default_pointer
 			end
 		end
 

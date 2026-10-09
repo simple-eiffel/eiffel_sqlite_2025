@@ -157,6 +157,18 @@ feature -- Externals
 			is_class: class
 		end
 
+	c_sqlite3_close_v2_reclaiming (a_db: POINTER): INTEGER
+			-- `c_sqlite3_close_v2' for `dispose', which may run in the middle of a garbage
+			-- collection: not `blocking', so the thread never leaves and re-enters Eiffel code
+			-- while the collection is in progress. A zombie close does not wait on locks.
+		external
+			"C inline use <sqlite3.h>"
+		alias
+			"return (EIF_INTEGER)sqlite3_close_v2((sqlite3 *)$a_db)"
+		ensure
+			is_class: class
+		end
+
 	c_sqlite3_column_blob (a_stmt: POINTER; a_column: INTEGER): POINTER
 		external
 			"C inline use <sqlite3.h>"
