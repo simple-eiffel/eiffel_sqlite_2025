@@ -4,6 +4,8 @@
 
 # Eiffel SQLite 2025
 
+![Windows: tests pass](https://img.shields.io/badge/Windows-tests%20pass-0078D6?logo=windows&logoColor=white) ![Linux: tests pass](https://img.shields.io/badge/Linux-tests%20pass-FCC624?logo=linux&logoColor=black) ![macOS: tests pass](https://img.shields.io/badge/macOS-tests%20pass-000000?logo=apple&logoColor=white)
+
 **SQLite 3.53.4 wrapper for Eiffel with FTS5, JSON, RTREE, GEOPOLY and math functions.**
 
 The low-level SQLite binding under [simple_sql](https://github.com/ljr1981/simple_sql). In the Simple Eiffel
